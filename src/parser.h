@@ -3,12 +3,16 @@
 #define PARSER_H
 
 #include <stdlib.h>
-#include "lexer.h"  // Value
+#include <stdint.h>
+#include <string.h>
+#include "lexer.h"  // Value, TokenType
 
 typedef struct AST AST;
 
 typedef struct { char *name; AST *value; } AST_ASSIGN;
-typedef struct { int number; } AST_NUMBER;
+typedef struct { int32_t number; } AST_INT;
+typedef struct { float number; } AST_FLOAT;
+typedef struct { char *string; } AST_STRING;
 
 typedef struct { AST *left; AST *right; } AST_ADD;
 typedef struct { AST *left; AST *right; } AST_SUB;
@@ -17,11 +21,13 @@ typedef struct { AST *left; AST *right; } AST_DIV;
 
 typedef enum {
   TAG_ASSIGN,
-  TAG_NUMBER,
+  TAG_INT,
+  TAG_FLOAT,
   TAG_ADD,
   TAG_SUB,
   TAG_MUL,
   TAG_DIV,
+  TAG_STRING,
 } AST_TAG;
 
 typedef struct AST {
@@ -29,7 +35,9 @@ typedef struct AST {
 
   union {
     AST_ASSIGN ast_assign;
-    AST_NUMBER ast_number;
+    AST_INT ast_int;
+    AST_FLOAT ast_float;
+    AST_STRING ast_string;
     
     AST_ADD ast_add;
     AST_SUB ast_sub;
@@ -40,9 +48,7 @@ typedef struct AST {
 
 typedef enum {
   CHAR,
-  INT16,
-  INT32,
-  INT64,
+  INT,
   FLOAT,
   STRING,
   NONE
@@ -56,10 +62,13 @@ typedef struct {
 
 AST *new_ast(AST ast);
 AST *new_ast_assign(char *name, AST *value);
-AST *new_ast_number(int number);
+AST *new_ast_int64(int64_t number);
+AST *new_ast_float(float number);
 AST *new_ast_add(AST *left, AST *right);
 AST *new_ast_sub(AST *left, AST *right);
 AST *new_ast_mul(AST *left, AST *right);
 AST *new_ast_div(AST *left, AST *right);
+AST *generate_tree(TokenList tl);
+void print_tree(AST *node, int indent);
 
 #endif

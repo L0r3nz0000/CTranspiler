@@ -3,11 +3,18 @@
 void generate_code(AST *ptr, FILE *f) {
   AST ast = *ptr;
   switch (ast.tag) {
-    case TAG_NUMBER: {
-      AST_NUMBER data = ast.data.ast_number;
+    // da provare
+    case TAG_INT: {
+      AST_INT data = ast.data.ast_int;
       fprintf(f, "\tmov rax, %d\n", data.number);
       return;
     }
+    // TODO: Correggere implementazione float
+    // case TAG_FLOAT: {
+    //   AST_FLOAT data = ast.data.ast_float;
+    //   fprintf(f, "\tmov rax, %f\n", data.number);
+    //   return;
+    // }
     case TAG_ASSIGN: {
       AST_ASSIGN data = ast.data.ast_assign;
       generate_code(data.value, f);
@@ -63,13 +70,7 @@ void declare_variables(Variable symbol_table[], int size, FILE* f) {
       case CHAR:
         fprintf(f, "\t%s db %d\n", symbol_table[i].name, symbol_table[i].value.value.cval);  // 8 bit (define byte)
         break;
-      case INT16:
-        fprintf(f, "\t%s dw %d\n", symbol_table[i].name, symbol_table[i].value.value.i16val);  // 16 bit (define word)
-        break;
-      case INT32:
-        fprintf(f, "\t%s dd %d\n", symbol_table[i].name, symbol_table[i].value.value.i32val);  // 32 bit (define double word)
-        break;
-      case INT64:
+      case INT:
         fprintf(f, "\t%s dq %ld\n", symbol_table[i].name, symbol_table[i].value.value.i64val);  // 64 bit (define quadword)
         break;
       case FLOAT:

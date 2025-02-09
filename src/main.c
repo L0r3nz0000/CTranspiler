@@ -66,24 +66,15 @@ int main(int argc, char *argv[]) {
   TokenList tokens = analyze_code(code);
 
   print_token_list(tokens);
+  printf("\n");
 
   Variable symbol_table[] = {
-    {"a", INT32, {1}},
-    {"b", INT32, {2}},
-    {"c", INT32, {3}},
+    {"variabile1", INT, {1}},
   };
   int size = 3;
 
-  // Test AST: a = 1 + 2 * 3
-
-  AST *n1 = new_ast_number(2);
-  AST *n2 = new_ast_number(3);
-  AST *mul = new_ast_mul(n1, n2);
-
-  AST *n1 = new_ast_number(1);
-  AST *sum = new_ast_sum(n1, mul);
-
-  AST *ast = new_ast_assign("a", sum);
+  AST *program = generate_tree(tokens);
+  print_tree(program, 0);
 
   FILE *f = fopen("out.asm", "w");
   if (f == NULL) {
@@ -92,7 +83,7 @@ int main(int argc, char *argv[]) {
   }
   
   // Write assembly on file
-  generate_asm(ast, symbol_table, size, f);
+  generate_asm(program, symbol_table, size, f);
 
   // Save assembly file
   fclose(f);

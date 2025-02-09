@@ -12,7 +12,7 @@ const char* TOKEN_PATTERNS[] = {
   "\\b[0-9]+\\b",               // TOKEN_NUMBER: sequenza di cifre
   "\"((\\\\.|[^\"])*)\"",       // TOKEN_STRING: stringa tra virgolette
 
-  "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)",  // TOKEN_IDENTIFIER: tipi, nomi variabili
+  "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)",  // TOKEN_IDENTIFIER: nomi variabili
 
   // Fine linea
   ";",            // TOKEN_EOL: punto e virgola
@@ -158,15 +158,15 @@ void print_token_list(TokenList tl) {
   Token *tokens = tl.tokens;
 
   for (int i = 0; i < tl.size; i++) {
-    printf("Ricevuto token: (tipo: %s, valore: ", TOKEN_NAMES[tokens[i].type]);
+    printf("(Token) {%s, value: ", TOKEN_NAMES[tokens[i].type]);
 
     if (tokens[i].type == TOKEN_STRING || tokens[i].type == TOKEN_IDENTIFIER) {
-      printf("%s)\n", tokens[i].value.value.sval);
+      printf("%s}\n", tokens[i].value.value.sval);
     } else {
       if (!tokens[i].value.is_none) {
-        printf("%d)\n", tokens[i].value.value);
+        printf("%d}\n", tokens[i].value.value);
       } else {
-        printf("NONE)\n");
+        printf("NONE}\n");
       }
     }
   }

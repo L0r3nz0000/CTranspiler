@@ -1,18 +1,16 @@
 section .data
-	a dd 1
-	b dd 2
-	c dd 3
+	variabile1 dq 1
 section .bss
 section .text
 	global _start
 
 _start:
-	mov rax, 1
 	push rax
-	mov rax, 2
+	mov rax, 3
 	pop rbx
-	add rax, rbx
-	mov [a], rax
+	sub rax, rbx
+	mov [variabile2], rax
+	mov [variabile1], rax
 
 exit:
 	mov rax, 60
