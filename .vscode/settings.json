@@ -72,6 +72,7 @@
     "*.tcc": "c",
     "type_traits": "c",
     "cmath": "c",
-    "stdio.h": "c"
+    "stdio.h": "c",
+    "typeinfo": "c"
   }
 }

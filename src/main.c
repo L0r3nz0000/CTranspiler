@@ -49,10 +49,11 @@ char* read_code_from_file(const char* filename) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s [source.l]\n", argv[0]);
-    exit(1);
-  }
+  // if (argc != 2) {
+  //   fprintf(stderr, "Usage: %s [source.l]\n", argv[0]);
+  //   exit(1);
+  // }
+  argv[1] = "src.l";
 
   char *code = read_code_from_file(argv[1]);
 
@@ -68,13 +69,11 @@ int main(int argc, char *argv[]) {
   print_token_list(tokens);
   printf("\n");
 
-  Variable symbol_table[] = {
-    {"variabile1", INT, {1}},
-  };
-  int size = 3;
+  AST_BLOCK *program = parse_program(tokens);
 
-  AST *program = generate_tree(tokens);
-  print_tree(program, 0);
+  for (int i = 0; i < program->count; i++) {
+    print_tree(program->statements[i], 0);
+  }
 
   FILE *f = fopen("out.asm", "w");
   if (f == NULL) {
@@ -83,12 +82,12 @@ int main(int argc, char *argv[]) {
   }
   
   // Write assembly on file
-  generate_asm(program, symbol_table, size, f);
+  generate_asm(program, f);
 
   // Save assembly file
   fclose(f);
 
   // Compiles the assembly with nasm
   system("nasm -f elf64 -g out.asm -o out.o");
-  system("ld -g -o out out.o");  // Links the binary
+  system("gcc -no-pie out.o -o out -nostartfiles");  // Links the binary
 }

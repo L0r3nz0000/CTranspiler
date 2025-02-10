@@ -7,6 +7,14 @@ const char* TOKEN_PATTERNS[] = {
   "\\*",          // TOKEN_MUL: *
   "/",            // TOKEN_DIV: /
   "=",            // TOKEN_ASSIGN: =
+  "fun\\s+",      // TOKEN_FUN: fun funzione() => {}
+  "\\(",           // TOKEN_LPAREN
+  "\\)",           // TOKEN_RPAREN
+  "{",            // TOKEN_LBRACE
+  "}",            // TOKEN_RBRACE
+  "@",            // TOKEN_DECLARE
+  "=>",           // TOKEN_ARROW
+  "<-",           // TOKEN_RETURN
 
   // Valori costanti
   "\\b[0-9]+\\b",               // TOKEN_NUMBER: sequenza di cifre
@@ -24,6 +32,14 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_MUL",
   "TOKEN_DIV",
   "TOKEN_ASSIGN",
+  "TOKEN_FUN",
+  "TOKEN_LPAREN",
+  "TOKEN_RPAREN",
+  "TOKEN_LBRACE",
+  "TOKEN_RBRACE",
+  "TOKEN_DECLARE",
+  "TOKEN_ARROW",
+  "TOKEN_RETURN",
   "TOKEN_NUMBER",
   "TOKEN_STRING",
   "TOKEN_IDENTIFIER",
@@ -144,6 +160,8 @@ Token *find_first_token(char *code) {
     pcre2_match_data_free(match_data);
   } else {
     printf("No pattern found in this code.\n");
+    //free(token);
+    return NULL;
   }
 
   // Free the memory allocated for the regular expressions
@@ -189,7 +207,11 @@ TokenList analyze_code(char *code) {
   if (tokens != NULL) {
     while (i < size) {
       // Last position
-      tokens[elements - 1] = *find_first_token(code);
+      Token *next_token = find_first_token(code);
+      if (next_token == NULL) {
+        break; // Evita di procedere se non ci sono più token
+      }
+      tokens[elements - 1] = *next_token;
 
       code += tokens[elements - 1].start + tokens[elements - 1].length;
       i += tokens[elements - 1].start + tokens[elements - 1].length;

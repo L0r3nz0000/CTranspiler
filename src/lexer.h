@@ -31,6 +31,14 @@ typedef enum {
   TOKEN_MUL,     // *
   TOKEN_DIV,     // /
   TOKEN_ASSIGN,  // =
+  TOKEN_FUN,     // fun
+  TOKEN_LPAREN,  // (
+  TOKEN_RPAREN,  // )
+  TOKEN_LBRACE,  // {
+  TOKEN_RBRACE,  // }
+  TOKEN_DECLARE, // @
+  TOKEN_ARROW,   // =>
+  TOKEN_RETURN,  // <-
 
   // Constant values
   TOKEN_NUMBER,  // 123

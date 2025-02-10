@@ -4,6 +4,6 @@
 #include "parser.h"   // AST, Variable
 #include <stdio.h>
 
-void generate_asm(AST *ptr, Variable symbol_table[], int size, FILE* f);
+void generate_asm(AST_BLOCK *block, FILE* f);
 
 #endif
