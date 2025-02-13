@@ -43,6 +43,7 @@ typedef enum {
   // Constant values
   TOKEN_NUMBER,  // 123
   TOKEN_STRING,  // "hello"
+  
 
   TOKEN_IDENTIFIER,    // variable name, type name
   TOKEN_EOL            // ;
