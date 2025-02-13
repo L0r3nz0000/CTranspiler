@@ -25,27 +25,30 @@ typedef struct {
 } Value;
 
 typedef enum {
+  // Keywords
+  TOKEN_FUN,     // fun
+  TOKEN_ARROW,   // =>
+  TOKEN_RETURN,  // <-
+
   // Operators
+  TOKEN_ASSIGN,  // =
   TOKEN_SUM,     // +
   TOKEN_SUB,     // -
   TOKEN_MUL,     // *
   TOKEN_DIV,     // /
-  TOKEN_ASSIGN,  // =
-  TOKEN_FUN,     // fun
+
+  // Delimiters
   TOKEN_LPAREN,  // (
   TOKEN_RPAREN,  // )
   TOKEN_LBRACE,  // {
   TOKEN_RBRACE,  // }
   TOKEN_DECLARE, // @
-  TOKEN_ARROW,   // =>
-  TOKEN_RETURN,  // <-
+  TOKEN_EOL,     // ;
 
-  // Constant values
-  TOKEN_NUMBER,  // 123
-  TOKEN_STRING,  // "hello"
-
-  TOKEN_IDENTIFIER,    // variable name, type name
-  TOKEN_EOL            // ;
+  // Constants and Identifiers
+  TOKEN_NUMBER,      // 123
+  TOKEN_STRING,      // "hello"
+  TOKEN_IDENTIFIER   // variable name, type name
 } TokenType;
 
 #define NONE_VAL (Value) {0, 1}
