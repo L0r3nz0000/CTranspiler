@@ -31,11 +31,11 @@ typedef enum {
   TOKEN_RETURN,  // <-
 
   // Operators
-  TOKEN_ASSIGN,  // =
   TOKEN_SUM,     // +
   TOKEN_SUB,     // -
   TOKEN_MUL,     // *
   TOKEN_DIV,     // /
+  TOKEN_ASSIGN,  // =
 
   // Delimiters
   TOKEN_LPAREN,  // (
@@ -43,12 +43,13 @@ typedef enum {
   TOKEN_LBRACE,  // {
   TOKEN_RBRACE,  // }
   TOKEN_DECLARE, // @
-  TOKEN_EOL,     // ;
 
   // Constants and Identifiers
   TOKEN_NUMBER,      // 123
   TOKEN_STRING,      // "hello"
-  TOKEN_IDENTIFIER   // variable name, type name
+  TOKEN_IDENTIFIER,  // variable name, type name
+
+  TOKEN_EOL,         // ;
 } TokenType;
 
 #define NONE_VAL (Value) {0, 1}
@@ -65,7 +66,7 @@ typedef struct {
   int size;
 } TokenList;
 
-TokenList analyze_code(char *code);
+TokenList tokenize_code(const char *input);
 void print_token_list(TokenList tl);
 
 #endif

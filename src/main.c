@@ -64,30 +64,43 @@ int main(int argc, char *argv[]) {
   }
 
   // Tokenize the code
-  TokenList tokens = analyze_code(code);
+  TokenList tokens = tokenize_code(code);
 
   print_token_list(tokens);
   printf("\n");
 
-  AST_BLOCK *program = parse_program(tokens);
+  PROGRAM *program = parse_program(tokens, true);
 
-  for (int i = 0; i < program->count; i++) {
-    print_tree(program->statements[i], 0);
+  printf("Symbol table:\n");
+  for (int i = 0; i < program->symbol_table->count; i++) {
+    printf("  variable: %s\n", program->symbol_table->vars[i].name);
   }
 
-  FILE *f = fopen("out.asm", "w");
+  for (int i = 0; i < program->block->count; i++) {
+    print_tree(program->block->statements[i], 0);
+  }
+
+  FILE *f = fopen("out.c", "w");
   if (f == NULL) {
-    printf("Error opening assembly file!\n");
+    printf("Error opening output file!\n");
     exit(1);
   }
   
-  // Write assembly on file
-  generate_asm(program, f);
+  // Write code on file
+  generate_c_code(program, f);
 
-  // Save assembly file
+  bool static_binary = false;
+
+  // Save C file
   fclose(f);
 
+  // Compiles the output with gcc
+  if (static_binary) {
+    system("gcc -s out.c -o out -nostdlib -ffreestanding -static");
+  } else {
+    system("gcc -s out.c -o out");
+  }
   // Compiles the assembly with nasm
-  system("nasm -f elf64 -g out.asm -o out.o");
-  system("gcc -no-pie out.o -o out -nostartfiles");  // Links the binary
+  // system("nasm -f elf64 -g out.asm -o out.o");
+  // system("gcc -no-pie out.o -o out -nostartfiles");  // Links the binary
 }

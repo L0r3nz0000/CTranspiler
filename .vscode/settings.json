@@ -73,6 +73,7 @@
     "type_traits": "c",
     "cmath": "c",
     "stdio.h": "c",
-    "typeinfo": "c"
+    "typeinfo": "c",
+    "stdint.h": "c"
   }
 }

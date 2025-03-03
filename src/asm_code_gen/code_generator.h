@@ -3,9 +3,7 @@
 #define CODE_GENERATOR_H
 #include "parser.h"   // AST, Variable
 #include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
 
-void generate_c_code(PROGRAM *program, FILE* f);
+void generate_asm(PROGRAM *program, FILE* f, bool no_stdlib);
 
 #endif
