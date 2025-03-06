@@ -4,7 +4,7 @@ fun funzione(x) => {
 }
 
 fun main() => {
-  print_int(funzione(3));
-  printf("ciao %d", 3);
+  print("v: ");
+  println(funzione(3));
   <- 0;
 }

@@ -239,6 +239,9 @@ VarType typeOf(AST* ast) {
     case TAG_DIV:
       t = FLOAT;
       break;
+    case TAG_DECLARE:
+      t = ast->data.ast_declare.type;
+      break;
     default:
       printf("Invalid operation (typeof) for tag: %d\n", ast->tag);
       exit(1);
@@ -367,7 +370,7 @@ AST *function_definition(TokenList tl) {
   }
 
   // Crea il nodo funzione
-  return new_ast_funct(r_type, name, NULL, params, param_count, block);  // ! SOSTITUIRE NULL CON I TIPI DI DATI
+  return new_ast_funct(r_type, name, NULL, params, param_count, block);  // ! RIMUOVERE I TIPI DI DATI
 }
 
 bool ends_with(const char *str, const char *suffix) {
@@ -387,6 +390,10 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
 
   AST *left, *right;  // Dichiarazioni per eventuali operatori binari
   VarType t1, t2;  // Used for type deduction
+
+  if (tl.tokens[0].type == TOKEN_STRING) {
+    return new_ast_string(tl.tokens[0].value.value.sval);
+  }
 
   if (tl.tokens[0].type == TOKEN_RETURN) {
     // Considera i token successivi come espressione di ritorno

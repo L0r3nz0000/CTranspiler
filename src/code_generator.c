@@ -32,7 +32,7 @@ void generate_function_call(AST_CALL ast, FILE *f) {
   fprintf(f, "%s(", ast.name);
 
   for (int i = 0; i < ast.arg_count; i++) {
-    generate_code(ast.args[i], f, true);
+    generate_code(ast.args[i], f, false, true);
 
     if (i < ast.arg_count - 1) {
       fprintf(f, ", ");
@@ -43,12 +43,10 @@ void generate_function_call(AST_CALL ast, FILE *f) {
 
 void define_function(AST_FUNCT ast, FILE *f) {
   printf("Defining: ");
-  print_type(ast.ret_type);
-  printf(" %s(", ast.name);
+  printf("Value %s(", ast.name);
 
   for (int i = 0; i < ast.param_count; i++) {
-    print_type(INT); // TODO: riconoscere automaticamente i tipi di dati     print_type(ast.param_types[i]);
-    printf(" %s", ast.params[i]);
+    printf("Value %s", ast.params[i]);
 
     if (i < ast.param_count - 1) {
       printf(", ");
@@ -56,13 +54,14 @@ void define_function(AST_FUNCT ast, FILE *f) {
   }
   printf(");\n");
 
-  write_type(ast.ret_type, f);
-  fprintf(f, " %s(", ast.name);
+  if (strcmp(ast.name, "main") == 0) {
+    fprintf(f, "int main(");
+  } else {
+    fprintf(f, "Value %s(", ast.name);  // return type
+  }
 
   for (int i = 0; i < ast.param_count; i++) {
-    write_type(INT, f);//write_type(ast.arg_types[i]);
-
-    fprintf(f, " %s", ast.params[i]);
+    fprintf(f, "Value %s", ast.params[i]);  // args type
 
     if (i < ast.param_count - 1) {
       fprintf(f, ", ");
@@ -72,13 +71,13 @@ void define_function(AST_FUNCT ast, FILE *f) {
   
   // Genera il body della funzione
   for (int i = 0; i < ast.body->count; i++) {
-    generate_code(ast.body->statements[i], f, false);
+    generate_code(ast.body->statements[i], f, strcmp(ast.name, "main") == 0, false);
   }
 
   fprintf(f, "}\n");
 }
 
-void generate_code(AST *ast, FILE *f, bool nested_call) {
+void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
   switch (ast->tag) {
     case TAG_SYSTEM_IMPORT: {
       AST_SYSTEM_IMPORT data = ast->data.ast_system_import;
@@ -92,12 +91,18 @@ void generate_code(AST *ast, FILE *f, bool nested_call) {
     }
     case TAG_INT: {
       AST_INT data = ast->data.ast_int;
-      fprintf(f, "%d", data.number);
+      fprintf(f, "(Value) {INT, .value.i64val = %d, 0}", data.number);
       return;
     }
     case TAG_FLOAT: {
       AST_FLOAT data = ast->data.ast_float;
-      fprintf(f, "%f", data.number);
+      fprintf(f, "(Value) {FLOAT, .value.fval = %f, 0}", data.number);
+      return;
+    }
+    case TAG_STRING: {
+      AST_STRING data = ast->data.ast_string;
+      fprintf(f, "(Value) {STRING, .value.sval = {\"%s\", %d}, 0}", data.string, strlen(data.string));
+      return;
     }
     case TAG_FUN: {
       AST_FUNCT data = ast->data.ast_funct;
@@ -114,53 +119,92 @@ void generate_code(AST *ast, FILE *f, bool nested_call) {
     }
     case TAG_RETURN: {
       AST_RETURN data = ast->data.ast_return;
-      
-      fprintf(f, "return ");
-      generate_code(data.value, f, false);
-      fprintf(f, ";\n");
+
+      if (main) {
+        fprintf(f, "return 0;\n");
+      } else {
+        fprintf(f, "return ");
+        generate_code(data.value, f, false, false);
+        fprintf(f, ";\n");
+      }
       return;
     }
     case TAG_ASSIGN: {
       AST_ASSIGN data = ast->data.ast_assign;
-      fprintf(f, "%s = ", data.name);
-      generate_code(data.value, f, false);
-      fprintf(f, ";\n");
+      switch (typeOf(data.value)) {
+        case INT:
+          fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
+          break;
+        case FLOAT:
+          fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
+          break;
+        case CHAR:
+          fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
+          break;
+        case STRING:
+          fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
+          break;
+      }
+      generate_code(data.value, f, false, false);
+      fprintf(f, ", 0};\n");
       return;
     }
     case TAG_DECLARE: {
       AST_DECLARE data = ast->data.ast_declare;
-      write_type(data.type, f);
-      fprintf(f, " %s = ", data.name);
-      generate_code(data.value, f, false);
-      fprintf(f, ";\n");
+      
+      switch (typeOf(data.value)) {
+        case INT:
+          fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
+          break;
+        case FLOAT:
+          fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
+          break;
+        case CHAR:
+          fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
+          break;
+        case STRING:
+          fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
+          break;
+      }
+
+      generate_code(data.value, f, false, false);
+      fprintf(f, ", 0};\n");
       return;
     }
     case TAG_ADD: {
       AST_ADD data = ast->data.ast_add;
-      generate_code(data.left, f, false);
-      fprintf(f, " + ");
-      generate_code(data.right, f, false);
+      fprintf(f, "add_operator(");
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
       return;
     }
     case TAG_SUB: {
       AST_SUB data = ast->data.ast_sub;
-      generate_code(data.left, f, false);
-      fprintf(f, " - ");
-      generate_code(data.right, f, false);
+      fprintf(f, "sub_operator(");
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
       return;
     }
     case TAG_MUL: {
       AST_MUL data = ast->data.ast_mul;
-      generate_code(data.left, f, false);
-      fprintf(f, " * ");
-      generate_code(data.right, f, false);
+      fprintf(f, "mul_operator(");
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
       return;
     }
     case TAG_DIV: {
       AST_DIV data = ast->data.ast_div;
-      generate_code(data.left, f, false);
-      fprintf(f, " / ");
-      generate_code(data.right, f, false);
+      fprintf(f, "div_operator(");
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
       return;
     }
   }
@@ -168,12 +212,23 @@ void generate_code(AST *ast, FILE *f, bool nested_call) {
 
 void generate_c_code(PROGRAM *program, FILE *f) {
   fprintf(f, "#include <stdio.h>\n");
-  fprintf(f, "void print_int(int n) { printf(\"%%d\\n\", n); }\n");
-  fprintf(f, "void print_float(float n) { printf(\"%%f\\n\", n); }\n");
-  fprintf(f, "void print_char(char n) { printf(\"%%c\\n\", n); }\n");
+  
+  FILE *src = fopen("mystdlib.h", "r");
+
+  if (!src) {
+    perror("Errore nell'apertura del file");
+    exit(1);
+  }
+
+  int ch;
+  while ((ch = fgetc(src)) != EOF) {  // Legge un carattere
+    fputc(ch, f);                // Scrive il carattere nel file di output
+  }
+
+  fclose(src);
 
   for (int i = 0; i < program->block->count; i++) {
     AST *ast = program->block->statements[i];
-    generate_code(ast, f, false);
+    generate_code(ast, f, false, false);
   }
 }
