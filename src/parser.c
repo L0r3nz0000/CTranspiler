@@ -164,7 +164,7 @@ AST *new_ast_var(VarType type, char *name) {
   return new_ast((AST) {
     .tag = TAG_VAR,
     .data = {
-      .ast_declare = {
+      .ast_var = {
         .type = type,
         .name = name,
       },
@@ -172,8 +172,19 @@ AST *new_ast_var(VarType type, char *name) {
   });
 }
 
+AST *new_ast_system_import(char *filename) {
+  return new_ast((AST) {
+    .tag = TAG_SYSTEM_IMPORT,
+    .data = {
+      .ast_system_import = {
+        .filename = filename,
+      },
+    },
+  });
+}
+
 VarType typeOf(AST* ast) {
-  VarType t = NONE_TYPE;
+  VarType t = VOID;
   VarType t1, t2;
 
   switch (ast->tag) {
@@ -273,8 +284,34 @@ size_t find(TokenList tl, TokenType type) {
   return index;
 }
 
+size_t find_last(TokenList tl, TokenType type) {
+  size_t index = -1;
+  for (int i = tl.size - 1; i >= 0; i--) {
+    if (tl.tokens[i].type == type) {
+      index = i;
+      break;
+    }
+  }
+  return index;
+}
+
 TokenList slice(TokenList tl, int start, int elements) {
   return (TokenList) { .tokens = &tl.tokens[start], .size = elements };
+}
+
+size_t find_next_comma(TokenList tl, size_t j) {
+  if (j >= tl.size) return -1; // Evita accessi fuori limite
+  TokenList sublist = slice(tl, j + 1, tl.size - (j + 1)); 
+  size_t relative_index = find(sublist, TOKEN_COMMA);
+  return (relative_index != (size_t)-1) ? j + 1 + relative_index : -1;
+}
+
+int min(int a, int b) {
+  return a < b ? a : b;
+}
+
+int max(int a, int b) {
+  return a > b ? a : b;
 }
 
 TokenList extract_block(TokenList tl) {
@@ -317,22 +354,31 @@ AST *function_definition(TokenList tl) {
   i++; // Salta il token =>
 
   // Analizza il blocco codice della funzione
-  TokenList sublist = extract_block(tl);
-  AST_BLOCK *block = parse_program(sublist, false);
+  TokenList body = extract_block(tl);
+  AST_BLOCK *block = parse_program(body, false);
 
-  VarType r_type = NONE_TYPE;
+  VarType r_type = VOID;
 
   if (block->statements[block->count-1]->tag == TAG_RETURN) {
     printf("Calculating type for return tag\n");
     r_type = typeOf(block->statements[block->count-1]->data.ast_return.value);
-  } else {
-    printf("ERROR: Function with no return statement??\n");  // TODO: Trasformare in un warning con return void
-    printf("Last block of the function is tag: %d\n", block->statements[block->count-1]->tag);
-    exit(1);
+  } else if (find(body, TOKEN_RETURN) != -1) {
+    printf("WARNING: The return statement shuld be the last operation of the function\n");
   }
 
   // Crea il nodo funzione
   return new_ast_funct(r_type, name, NULL, params, param_count, block);  // ! SOSTITUIRE NULL CON I TIPI DI DATI
+}
+
+bool ends_with(const char *str, const char *suffix) {
+  size_t str_len = strlen(str);
+  size_t suffix_len = strlen(suffix);
+
+  if (suffix_len > str_len) {
+    return false;
+  }
+
+  return strcmp(str + (str_len - suffix_len), suffix) == 0;
 }
 
 AST *generate_tree(TokenList tl, bool parse_functions) {
@@ -354,21 +400,75 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     return function_definition(tl);
   }
 
-  // Controlla se è una chiamata di funziona
+  // Controlla se è una chiamata di funzione
   for (int i = 0; i < tl.size; i++) {
     if (tl.tokens[i].type == TOKEN_IDENTIFIER && tl.tokens[i + 1].type == TOKEN_LPAREN) {
       char *name = tl.tokens[i].value.value.sval;
       int arg_count = 0;
       AST **args = malloc(sizeof(AST *) * 6);
 
-      int j = i + 2;
-      while (tl.tokens[j].type != TOKEN_RPAREN) {
-        args[arg_count++] = generate_tree((TokenList){.tokens = &tl.tokens[j], .size = 1}, false);
-        j += 2; // Salta le virgole
+      int call_end = -1;  // Contiene l'indice della parentesi di chiusura
+      int paren_depth = 0;
+
+      printf("Cerco le parentesi di %s\n", name);
+      for (int j = i + 1; j < tl.size; j++) {
+        if (tl.tokens[j].type == TOKEN_LPAREN) {paren_depth++; printf("(");}
+        if (tl.tokens[j].type == TOKEN_RPAREN) {paren_depth--; printf(")");}
+
+        if (paren_depth == 0) {
+          call_end = j;
+          break;
+        }
+      }
+
+      if (call_end == -1) {
+        fprintf(stderr, "Errore: parentesi di chiusura non trovata nella chiamata a funzione: %s\n", name);
+        exit(1);
+      }
+
+      printf("Inizio chiamata a %s: %d\n", name, i + 2);
+      printf("Fine chiamata a %s: %d\n", name, call_end);
+
+      int first_param = i + 2;
+      int j = first_param;
+      while (j < call_end) {
+        if (tl.tokens[j].type == TOKEN_IDENTIFIER && tl.tokens[j + 1].type == TOKEN_LPAREN) {  // Chiamata a funzione
+          printf("\tParametro (chiamata alla funzione): %s\n", tl.tokens[j].value.value.sval);
+          int end = -1;
+
+          paren_depth = 0;
+          for (int h = j + 1; h < tl.size; h++) {
+            if (tl.tokens[h].type == TOKEN_LPAREN) {paren_depth++; printf("(");}
+            if (tl.tokens[h].type == TOKEN_RPAREN) {paren_depth--; printf(")");}
+
+            if (paren_depth == 0) {
+              end = h;
+              break;
+            }
+          }
+
+          args[arg_count++] = generate_tree(slice(tl, j, end + 1), false);
+          j += end + 1;
+          
+        } else {
+          printf("\tParametro (other): ");
+          print_token_list(slice(tl, j, 1));
+
+          int end = find_next_comma(tl, j);
+          if (end == -1) end = call_end;
+          args[arg_count++] = generate_tree(slice(tl, j, end - j), false);
+          j = end;
+        }
+        
+        printf("argomenti: %d\n", arg_count);
+        printf("call_end: %d\n", call_end);
+        printf("j: %d\n", j);
+        printf("tl.tokens[j].type: %d\n", tl.tokens[j].type);
       }
 
       return new_ast_call(name, args, arg_count);
     }
+
   }
 
   for (int i = 0; i < tl.size; i++) {  // Operatore =
@@ -433,7 +533,7 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
       case TOKEN_IDENTIFIER: {
         char *identifier = token->value.value.sval;
         // Per adesso ogni identificatore è considerato come nome di variabile perchè non ci sono ancora operatori
-        return new_ast_string(identifier);
+        return new_ast_var(INT, identifier);  // ! Usare una tabella dei tipi per determinare il tipo della variabile
       }
       break;
       case TOKEN_NUMBER:  // TODO: dividere TOKEN_NUMBER in TOKEN_INT e TOKEN_FLOAT
@@ -490,6 +590,7 @@ AST_BLOCK *define_all_functions(TokenList tl) {
     fun_index = find(tl, TOKEN_FUN);    // Inizio della definizione di funzione
     if (fun_index == -1) break;
 
+    // TODO: tenere in condiserazione la profondità delle parentesi
     block_end = find(tl, TOKEN_RBRACE); // Fine della definizione di funzione con }
 
     if (block_end == -1) {
@@ -555,6 +656,18 @@ void *parse_program(TokenList tl, bool parse_functions) {
   }
   block->statements = NULL;
   block->count = 0;
+
+  // Preprocessing
+  if (tl.tokens[0].type == TOKEN_IMPORT) {
+    char *filename = tl.tokens[1].value.value.sval;
+
+    if (!ends_with(filename, ".h") && !ends_with(filename, ".c")) {
+      fprintf(stderr, "Errore: il file da importare deve avere estensione .c o .h\n");
+      exit(1);
+    }
+    AST *import = new_ast_system_import(filename);
+    add_ast_to_block(block, import);
+  }
 
   // Aggiunge tutte le funzioni definite all'inizio del programma
   if (parse_functions) {
@@ -660,6 +773,13 @@ void print_tree(AST *node, int indent) {
     case TAG_RETURN:
       printf("Return\n");
       print_tree(node->data.ast_return.value, indent + 1);
+      break;
+    case TAG_DECLARE:
+      printf("Declare: %s\n", node->data.ast_declare.name);
+      print_tree(node->data.ast_declare.value, indent + 1);
+      break;
+    case TAG_SYSTEM_IMPORT:
+      printf("Import: %s\n", node->data.ast_system_import.filename);
       break;
     default:
       printf("Unknown node {%d}\n", node->tag);

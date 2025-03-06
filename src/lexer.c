@@ -3,8 +3,9 @@
 #define NUM_TOKENS (sizeof(TOKEN_PATTERNS) / sizeof(TOKEN_PATTERNS[0]))
 
 const char* TOKEN_PATTERNS[] = {
+  "\\bimport\\b",  // TOKEN_IMPORT
   "\\bfun\\b",     // TOKEN_FUN
-  "=>",            // TOKEN_ARROW
+  "\\s=>\\s",      // TOKEN_ARROW
   "<-",            // TOKEN_RETURN
   "\\+",           // TOKEN_SUM
   "-",             // TOKEN_SUB
@@ -20,10 +21,12 @@ const char* TOKEN_PATTERNS[] = {
   "\"((\\\\.|[^\"])*)\"", // TOKEN_STRING
   "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b", // TOKEN_IDENTIFIER
   ";",            // TOKEN_EOL
+  ",",            // TOKEN_COMMA
 };
 
 
 const char *TOKEN_NAMES[] = {
+  "TOKEN_IMPORT",
   "TOKEN_FUN",
   "TOKEN_ARROW",
   "TOKEN_RETURN",
@@ -40,7 +43,8 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_NUMBER",
   "TOKEN_STRING",
   "TOKEN_IDENTIFIER",
-  "TOKEN_EOL"
+  "TOKEN_EOL",
+  "TOKEN_COMMA",
 };
 
 Token *new_token(TokenType type, Value value) {
@@ -50,6 +54,16 @@ Token *new_token(TokenType type, Value value) {
     token->value = value;
   }
   return token;
+}
+
+void trim_edges(char *str) {
+  size_t len = strlen(str);
+  if (len > 2) {
+    memmove(str, str + 1, len - 2);  // Sposta i caratteri a sinistra
+    str[len - 2] = '\0';
+  } else {
+    str[0] = '\0';
+  }
 }
 
 
@@ -64,7 +78,7 @@ TokenList tokenize_code(const char *code) {
   for (i = 0; i < NUM_TOKENS; i++) {
     regex[i] = pcre2_compile((PCRE2_SPTR)TOKEN_PATTERNS[i], PCRE2_ZERO_TERMINATED, 0, &error_code, &error_offset, NULL);
     if (!regex[i]) {
-      printf("Errore nella compilazione del regex %s\n", TOKEN_PATTERNS[i]);
+      printf("Errore nella compilazione della regex %s\n", TOKEN_PATTERNS[i]);
       return (TokenList) {NULL, 0};
     }
   }
@@ -108,59 +122,18 @@ TokenList tokenize_code(const char *code) {
       }
 
       switch (best_match) {
-        case TOKEN_FUN:
-          tokens[tokens_found - 1] = (Token) {TOKEN_FUN, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_ARROW:
-          tokens[tokens_found - 1] = (Token) {TOKEN_ARROW, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_RETURN:
-          tokens[tokens_found - 1] = (Token) {TOKEN_RETURN, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_SUM:
-          tokens[tokens_found - 1] = (Token) {TOKEN_SUM, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_SUB:
-          tokens[tokens_found - 1] = (Token) {TOKEN_SUB, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_MUL:
-          tokens[tokens_found - 1] = (Token) {TOKEN_MUL, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_DIV:
-          tokens[tokens_found - 1] = (Token) {TOKEN_DIV, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_ASSIGN:
-          tokens[tokens_found - 1] = (Token) {TOKEN_ASSIGN, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_LPAREN:
-          tokens[tokens_found - 1] = (Token) {TOKEN_LPAREN, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_RPAREN:
-          tokens[tokens_found - 1] = (Token) {TOKEN_RPAREN, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_LBRACE:
-          tokens[tokens_found - 1] = (Token) {TOKEN_LBRACE, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_RBRACE:
-          tokens[tokens_found - 1] = (Token) {TOKEN_RBRACE, NONE_VAL, best_start, length};
-          break;
-        case TOKEN_DECLARE:
-          tokens[tokens_found - 1] = (Token) {TOKEN_DECLARE, NONE_VAL, best_start, length};
-          break;
         case TOKEN_NUMBER:
           tokens[tokens_found - 1] = (Token) {TOKEN_NUMBER, {atoi(value), 0}, best_start, length};
           break;
         case TOKEN_STRING:
+          trim_edges(value);
           tokens[tokens_found - 1] = (Token) {TOKEN_STRING, {.value.sval = value, 0}, best_start, length};
           break;
         case TOKEN_IDENTIFIER:
           tokens[tokens_found - 1] = (Token) {TOKEN_IDENTIFIER, {.value.sval = value, 0}, best_start, length};
           break;
-        case TOKEN_EOL:
-          tokens[tokens_found - 1] = (Token) {TOKEN_EOL, NONE_VAL, best_start, length};
-          break;
         default:
-          printf("Unknown token at position %d, length %d\n", best_start, length);
+          tokens[tokens_found - 1] = (Token) {best_match, NONE_VAL, best_start, length};
           break;
       }
 

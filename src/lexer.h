@@ -26,6 +26,7 @@ typedef struct {
 
 typedef enum {
   // Keywords
+  TOKEN_IMPORT,  // import
   TOKEN_FUN,     // fun
   TOKEN_ARROW,   // =>
   TOKEN_RETURN,  // <-
@@ -47,9 +48,10 @@ typedef enum {
   // Constants and Identifiers
   TOKEN_NUMBER,      // 123
   TOKEN_STRING,      // "hello"
-  TOKEN_IDENTIFIER,  // variable name, type name
+  TOKEN_IDENTIFIER,  // variable name, function name
 
   TOKEN_EOL,         // ;
+  TOKEN_COMMA,       // ,
 } TokenType;
 
 #define NONE_VAL (Value) {0, 1}
