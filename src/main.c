@@ -2,6 +2,7 @@
 #include "parser.h"  // AST, Variable
 #include "lexer.h"   // Token, TokenList, analyze_code(), print_token_list()
 #include "code_generator.h"  // generate_asm()
+#include "preprocessor.h"  // preprocess_code()
 
 char* read_code_from_file(const char* filename) {
   FILE* file = fopen(filename, "r");
@@ -53,15 +54,17 @@ int main(int argc, char *argv[]) {
   //   fprintf(stderr, "Usage: %s [source.l]\n", argv[0]);
   //   exit(1);
   // }
-  argv[1] = "src.l";
+  argv[1] = "src.ct";
 
   char *code = read_code_from_file(argv[1]);
-
-  printf("loading code: \n\n%s\n\n", code);
 
   if (code == NULL) {
     exit(1);
   }
+
+  preprocess_code(code);
+
+  printf("loading code: \n\n%s\n\n", code);
 
   // Tokenize the code
   TokenList tokens = tokenize_code(code);

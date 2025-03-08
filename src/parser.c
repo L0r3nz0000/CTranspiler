@@ -183,6 +183,31 @@ AST *new_ast_system_import(char *filename) {
   });
 }
 
+AST *new_ast_if(AST *condition, AST_BLOCK *body) {
+  return new_ast((AST) {
+    .tag = TAG_IF,
+    .data = {
+      .ast_if = {
+        .condition = condition,
+        .body = body,
+      },
+    },
+  });
+}
+
+AST *new_ast_condition(AST *left, AST *right, TokenType type) {
+  return new_ast((AST) {
+    .tag = TAG_CONDITION,
+    .data = {
+      .ast_condition = {
+        .left = left,
+        .right = right,
+        .type = type,
+      },
+    },
+  });
+}
+
 VarType typeOf(AST* ast) {
   VarType t = VOID;
   VarType t1, t2;
@@ -340,6 +365,29 @@ TokenList extract_block(TokenList tl) {
   return slice(tl, start + 1, (end - start - 2));
 }
 
+TokenList extract_parentheses(TokenList tl) {
+  size_t start = find(tl, TOKEN_LPAREN); // Trova '('
+  if (start >= tl.size) return (TokenList){ .tokens = NULL, .size = 0 }; // Nessuna parentesi trovata
+
+  int paren_count = 1; // Conta le parentesi annidate
+  size_t end = start + 1;
+
+  while (end < tl.size && paren_count > 0) {
+    if (tl.tokens[end].type == TOKEN_LPAREN) paren_count++;
+    if (tl.tokens[end].type == TOKEN_RPAREN) paren_count--;
+
+    end++;
+  }
+
+  if (paren_count != 0) {
+    fprintf(stderr, "Errore: parentesi ( ) non chiuse correttamente\n");
+    exit(1);
+  }
+
+  // Slice tra '(' e ')', escludendo le parentesi
+  return slice(tl, start + 1, (end - start - 2));
+}
+
 AST *function_definition(TokenList tl) {
   char *name = tl.tokens[1].value.value.sval; // Nome funzione
   int param_count = 0;
@@ -362,12 +410,12 @@ AST *function_definition(TokenList tl) {
 
   VarType r_type = VOID;
 
-  if (block->statements[block->count-1]->tag == TAG_RETURN) {
-    printf("Calculating type for return tag\n");
-    r_type = typeOf(block->statements[block->count-1]->data.ast_return.value);
-  } else if (find(body, TOKEN_RETURN) != -1) {
-    printf("WARNING: The return statement shuld be the last operation of the function\n");
-  }
+  // if (block->statements[block->count-1]->tag == TAG_RETURN) {
+  //   printf("Calculating type for return tag\n");
+  //   r_type = typeOf(block->statements[block->count-1]->data.ast_return.value);
+  // } else if (find(body, TOKEN_RETURN) != -1) {
+  //   printf("WARNING: The return statement shuld be the last operation of the function\n");
+  // }
 
   // Crea il nodo funzione
   return new_ast_funct(r_type, name, NULL, params, param_count, block);  // ! RIMUOVERE I TIPI DI DATI
@@ -390,6 +438,30 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
 
   AST *left, *right;  // Dichiarazioni per eventuali operatori binari
   VarType t1, t2;  // Used for type deduction
+
+  if (tl.tokens[0].type == TOKEN_IF) {
+    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
+    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
+
+    return new_ast_if(generate_tree(condition, false), parse_program(body, false));
+  }
+
+  for (int i = 0; i < tl.size; i++) {
+
+    // Gestisce tutte le condizioni binarie
+    if (tl.tokens[i].type == TOKEN_EQUALS || 
+        tl.tokens[i].type == TOKEN_NOT_EQUALS || 
+        tl.tokens[i].type == TOKEN_LESS_EQUALS || 
+        tl.tokens[i].type == TOKEN_GREATER_EQUALS || 
+        tl.tokens[i].type == TOKEN_LESS || 
+        tl.tokens[i].type == TOKEN_GREATER) {
+
+      TokenList operand1 = slice(tl, 0, i);
+      TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
+
+      return new_ast_condition(generate_tree(operand1, false), generate_tree(operand2, false), tl.tokens[i].type);
+    }
+  }
 
   if (tl.tokens[0].type == TOKEN_STRING) {
     return new_ast_string(tl.tokens[0].value.value.sval);
@@ -499,13 +571,22 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
       case TOKEN_SUM:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        VarType t1 = typeOf(left), t2 = typeOf(right);  // Type deduction
+        printf("chiamo typeOf passando come left:");
+        print_token_list((TokenList) {tl.tokens, i});
+        t1 = typeOf(left);
+        printf("chiamo typeOf passando come right:");
+        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
+        t2 = typeOf(right);
         return new_ast_add((t1 == INT && t2 == INT) ? INT : FLOAT, left, right);
       break;
       case TOKEN_SUB:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
+        printf("chiamo typeOf passando come left:");
+        print_token_list((TokenList) {tl.tokens, i});
         t1 = typeOf(left);
+        printf("chiamo typeOf passando come right:");
+        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
         t2 = typeOf(right);
         return new_ast_sub((t1 == INT && t2 == INT) ? INT : FLOAT, left, right);
       break;
@@ -533,20 +614,12 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     }
   }
 
-  for (int i = 0; i < tl.size; i++) {  // Casi base (dichiarazioni, nomi variabili, numeri costanti)
-    Token *token = &tl.tokens[i];
+  if (tl.tokens[0].type == TOKEN_NUMBER) {
+    return new_ast_int64(tl.tokens[0].value.value.i32val);
+  }
 
-    switch (token->type) {
-      case TOKEN_IDENTIFIER: {
-        char *identifier = token->value.value.sval;
-        // Per adesso ogni identificatore è considerato come nome di variabile perchè non ci sono ancora operatori
-        return new_ast_var(INT, identifier);  // ! Usare una tabella dei tipi per determinare il tipo della variabile
-      }
-      break;
-      case TOKEN_NUMBER:  // TODO: dividere TOKEN_NUMBER in TOKEN_INT e TOKEN_FLOAT
-        return new_ast_int64(token->value.value.i32val);
-      break;
-    }
+  if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
+    return new_ast_var(INT, tl.tokens[0].value.value.sval);  // ! Usare una tabella dei tipi per determinare il tipo della variabile
   }
 
   return NULL;
@@ -787,6 +860,16 @@ void print_tree(AST *node, int indent) {
       break;
     case TAG_SYSTEM_IMPORT:
       printf("Import: %s\n", node->data.ast_system_import.filename);
+      break;
+    case TAG_IF:
+      printf("If\n");
+      print_tree(node->data.ast_if.condition, indent + 1);
+      print_tree(node->data.ast_if.body, indent + 1);
+      break;
+    case TAG_CONDITION:
+      printf("Condition\n");
+      print_tree(node->data.ast_condition.left, indent + 1);
+      print_tree(node->data.ast_condition.right, indent + 1);
       break;
     default:
       printf("Unknown node {%d}\n", node->tag);
