@@ -67,7 +67,7 @@ Value sub_operator(Value a, Value b) {  // Operatore -
   } else  if (a.tag == FLOAT && b.tag == INT) {
     return (Value) {FLOAT, .value.i64val = a.value.fval - b.value.i64val, 0};
   } else {
-    printf("Error: Invalid data types for '-' operator. Cannot add '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '-' operator. Cannot subtract '%s' and '%s'.\n", typeOf(a), typeOf(b));
     exit(1);
   }
 }
@@ -82,7 +82,7 @@ Value mul_operator(Value a, Value b) {  // Operatore *
   } else  if (a.tag == FLOAT && b.tag == INT) {
     return (Value) {FLOAT, .value.i64val = a.value.fval * b.value.i64val, 0};
   } else {
-    printf("Error: Invalid data types for '*' operator. Cannot add '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '*' operator. Cannot multiply '%s' and '%s'.\n", typeOf(a), typeOf(b));
     exit(1);
   }
 }
@@ -97,7 +97,7 @@ Value div_operator(Value a, Value b) {  // Operatore /
   } else  if (a.tag == FLOAT && b.tag == INT) {
     return (Value) {FLOAT, .value.i64val = a.value.fval / b.value.i64val, 0};
   } else {
-    printf("Error: Invalid data types for '/' operator. Cannot add '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '/' operator. Cannot divide '%s' and '%s'.\n", typeOf(a), typeOf(b));
     exit(1);
   }
 }
