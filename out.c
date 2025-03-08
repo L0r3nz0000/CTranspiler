@@ -1,4 +1,3 @@
-#include <stdio.h>
 // Start mysdtlib
 #include <stdio.h>
 #include <stdlib.h>
@@ -152,7 +151,7 @@ Value funzione(Value x) {
 return add_operator(x, (Value) {INT, .value.i64val = 2, 0});
 }
 int main() {
-print((Value) {STRING, .value.sval = {"x: ", 3}, 0});
+print(type((Value) {STRING, .value.sval = {"v: ", 3}, 0}));
 println(funzione((Value) {INT, .value.i64val = 3, 0}));
 return 0;
 }

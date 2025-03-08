@@ -5,8 +5,17 @@
 const char* TOKEN_PATTERNS[] = {
   "\\bimport\\b",  // TOKEN_IMPORT
   "\\bfun\\b",     // TOKEN_FUN
-  "\\s=>\\s",      // TOKEN_ARROW
   "<-",            // TOKEN_RETURN
+  "if",            // TOKEN_IF
+
+  "==",            // TOKEN_EQUALS
+  "!=",            // TOKEN_NOT_EQUALS
+  "<=",            // TOKEN_LESS_EQUALS
+  ">=",            // TOKEN_GREATER_EQUALS
+  "<",             // TOKEN_LESS
+  ">",             // TOKEN_GREATER
+
+  "\\s=>\\s",      // TOKEN_ARROW
   "\\+",           // TOKEN_SUM
   "-",             // TOKEN_SUB
   "\\*",           // TOKEN_MUL
@@ -28,8 +37,17 @@ const char* TOKEN_PATTERNS[] = {
 const char *TOKEN_NAMES[] = {
   "TOKEN_IMPORT",
   "TOKEN_FUN",
-  "TOKEN_ARROW",
   "TOKEN_RETURN",
+  "TOKEN_IF",
+
+  "TOKEN_EQUALS",
+  "TOKEN_NOT_EQUALS",
+  "TOKEN_LESS_EQUALS",
+  "TOKEN_GREATER_EQUALS",
+  "TOKEN_LESS",
+  "TOKEN_GREATER",
+
+  "TOKEN_ARROW",
   "TOKEN_SUM",
   "TOKEN_SUB",
   "TOKEN_MUL",
@@ -99,7 +117,7 @@ TokenList tokenize_code(const char *code) {
         int start = (int)ovector[0];
         int end = (int)ovector[1];
 
-        if (start == 0 && (best_match == -1 || end < best_end)) {
+        if (start == 0 && best_match == -1) {  // if (start == 0 && (best_match == -1 || end < best_end)) {
           best_match = i;
           best_start = start;
           best_end = end;

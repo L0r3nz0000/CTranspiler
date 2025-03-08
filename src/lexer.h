@@ -28,8 +28,17 @@ typedef enum {
   // Keywords
   TOKEN_IMPORT,  // import
   TOKEN_FUN,     // fun
-  TOKEN_ARROW,   // =>
   TOKEN_RETURN,  // <-
+  TOKEN_IF,      // if (aggiungere else)
+
+  TOKEN_EQUALS,           // ==
+  TOKEN_NOT_EQUALS,       // !=
+  TOKEN_LESS_EQUALS,      // <=
+  TOKEN_GREATER_EQUALS,   // >=
+  TOKEN_LESS,             // <
+  TOKEN_GREATER,          // >
+
+  TOKEN_ARROW,   // =>
 
   // Operators
   TOKEN_SUM,     // +

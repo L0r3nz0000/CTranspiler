@@ -131,44 +131,33 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_ASSIGN: {
       AST_ASSIGN data = ast->data.ast_assign;
-      switch (typeOf(data.value)) {
-        case INT:
-          fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
-          break;
-        case FLOAT:
-          fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
-          break;
-        case CHAR:
-          fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
-          break;
-        case STRING:
-          fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
-          break;
-      }
+      fprintf(f, "Value %s = ", data.name);
       generate_code(data.value, f, false, false);
-      fprintf(f, ", 0};\n");
+      fprintf(f, ";\n");
       return;
     }
     case TAG_DECLARE: {
       AST_DECLARE data = ast->data.ast_declare;
+
+      fprintf(f, "Value %s = ", data.name);
       
-      switch (typeOf(data.value)) {
-        case INT:
-          fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
-          break;
-        case FLOAT:
-          fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
-          break;
-        case CHAR:
-          fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
-          break;
-        case STRING:
-          fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
-          break;
-      }
+      // switch (typeOf(data.value)) {
+      //   case INT:
+      //     fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
+      //     break;
+      //   case FLOAT:
+      //     fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
+      //     break;
+      //   case CHAR:
+      //     fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
+      //     break;
+      //   case STRING:
+      //     fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
+      //     break;
+      // }
 
       generate_code(data.value, f, false, false);
-      fprintf(f, ", 0};\n");
+      fprintf(f, ";\n");
       return;
     }
     case TAG_ADD: {
@@ -211,9 +200,7 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
 }
 
 void generate_c_code(PROGRAM *program, FILE *f) {
-  fprintf(f, "#include <stdio.h>\n");
-  
-  FILE *src = fopen("mystdlib.h", "r");
+  FILE *src = fopen("src/mystdlib.h", "r");  // Carica la libreria standard
 
   if (!src) {
     perror("Errore nell'apertura del file");
@@ -222,7 +209,7 @@ void generate_c_code(PROGRAM *program, FILE *f) {
 
   int ch;
   while ((ch = fgetc(src)) != EOF) {  // Legge un carattere
-    fputc(ch, f);                // Scrive il carattere nel file di output
+    fputc(ch, f);                     // Scrive il carattere nel file di output
   }
 
   fclose(src);

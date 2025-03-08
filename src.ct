@@ -1,0 +1,13 @@
+fun funzione(x) => {
+  <- x + 2;
+}
+
+fun main() => {
+  @ var = 3;
+  #if (var < 5) {
+  #  print("Minore di 5");
+  #}
+  
+  println("fuori dall'if");
+  <- 0;
+}

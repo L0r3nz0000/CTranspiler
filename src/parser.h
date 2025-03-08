@@ -45,10 +45,15 @@ typedef struct {
 
 typedef struct { VarType type; char *name; } AST_VAR;
 typedef struct { char* name; AST *value; } AST_ASSIGN;  // usare AST_VAR per il nome
+
 typedef struct { int32_t number; } AST_INT;
 typedef struct { float number; } AST_FLOAT;
 typedef struct { char *string; } AST_STRING;
+
 typedef struct { char *filename; } AST_SYSTEM_IMPORT;
+
+typedef struct { AST *left; AST *right; TokenType type; } AST_CONDITION;
+typedef struct { AST *condition; AST_BLOCK *body; } AST_IF;
 
 typedef struct { VarType ret_type; AST *left; AST *right; } AST_ADD;
 typedef struct { VarType ret_type; AST *left; AST *right; } AST_SUB;
@@ -91,6 +96,8 @@ typedef enum {
   TAG_DECLARE,
   TAG_VAR,
   TAG_SYSTEM_IMPORT,
+  TAG_IF,
+  TAG_CONDITION,
 } AST_TAG;
 
 typedef struct AST {
@@ -107,6 +114,8 @@ typedef struct AST {
     AST_RETURN ast_return;
     AST_DECLARE ast_declare;
     AST_SYSTEM_IMPORT ast_system_import;
+    AST_IF ast_if;
+    AST_CONDITION ast_condition;
     
     AST_ADD ast_add;
     AST_SUB ast_sub;
