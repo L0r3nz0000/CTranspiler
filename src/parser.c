@@ -542,6 +542,15 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     TokenList to = slice_from_to(header, find(header, TOKEN_TO) + 1, find(header, TOKEN_STEP));
     TokenList step = slice_from_to(header, find(header, TOKEN_STEP) + 1, header.size);
 
+    printf("Init: \n");
+    print_token_list(init);
+    printf("To: \n");
+    print_token_list(to);
+    printf("Step: \n");
+    print_token_list(step);
+    printf("Body: \n");
+    print_token_list(body);
+
     AST *init_ast = generate_tree(init, false);
     AST *to_ast = generate_tree(to, false);
     AST *step_ast = generate_tree(step, false);
@@ -551,6 +560,18 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
 
     if (to_ast->tag != TAG_INT || (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN)) {
       printf("Errore: inizializzazione del ciclo for non valida\n");
+      if (to_ast->tag != TAG_INT) {
+        printf("Errore: valore di end non valido\n");
+        exit(1);
+      } 
+      if (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN) {
+        printf("Errore: inizializzazione del ciclo for non valida\n");
+        exit(1);
+      }
+      if (step_ast->tag != TAG_INT) {
+        printf("Errore: valore di step non valido\n");
+        exit(1);
+      }
       exit(1);
     } else {
       if (init_ast->tag == TAG_DECLARE) {
@@ -579,7 +600,7 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     step_ast = new_ast_add(FLOAT, step_ast, new_ast_int64(step_value));
     AST *condition_ast = new_ast_condition(start_value, to_ast, condition_type);
 
-    return new_ast_for(init_ast, condition_ast, generate_tree(step, false), parse_program(body, false));
+    return new_ast_for(init_ast, condition_ast, step_ast, parse_program(body, false));
   }
 
   // Controlla se è una chiamata di funzione
@@ -628,8 +649,6 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
           j += end + 1;
           
         } else {
-          print_token_list(slice(tl, j, 1));
-
           int end = find_next_comma(tl, j);
           if (end == -1) end = call_end;
           args[arg_count++] = generate_tree(slice(tl, j, end - j), false);
@@ -722,7 +741,11 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     }
   }
 
-  if (tl.tokens[0].type == TOKEN_NUMBER) {
+  if (tl.tokens[0].type == TOKEN_FLOAT) {
+    return new_ast_float(tl.tokens[0].value.value.fval);
+  }
+
+  if (tl.tokens[0].type == TOKEN_INTEGER) {
     return new_ast_int64(tl.tokens[0].value.value.i32val);
   }
 

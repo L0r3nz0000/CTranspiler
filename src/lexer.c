@@ -31,8 +31,12 @@ const char* TOKEN_PATTERNS[] = {
   "{",             // TOKEN_LBRACE
   "}",             // TOKEN_RBRACE
   "@",             // TOKEN_DECLARE
-  "-?\\b\\d+(\\.\\d+)?\\b", // TOKEN_NUMBER
+  
+  // DATA TYPES
+  "-?\\d+\\.\\d+", // TOKEN_FLOAT
+  "-?\\d+",  // TOKEN_INTEGER
   "\"((\\\\.|[^\"])*)\"", // TOKEN_STRING
+
   "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b", // TOKEN_IDENTIFIER
   ";",            // TOKEN_EOL
   ",",            // TOKEN_COMMA
@@ -68,7 +72,8 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_LBRACE",
   "TOKEN_RBRACE",
   "TOKEN_DECLARE",
-  "TOKEN_NUMBER",
+  "TOKEN_FLOAT",
+  "TOKEN_INTEGER",
   "TOKEN_STRING",
   "TOKEN_IDENTIFIER",
   "TOKEN_EOL",
@@ -150,8 +155,11 @@ TokenList tokenize_code(const char *code) {
       }
 
       switch (best_match) {
-        case TOKEN_NUMBER:
-          tokens[tokens_found - 1] = (Token) {TOKEN_NUMBER, {atoi(value), 0}, best_start, length};
+        case TOKEN_INTEGER:
+          tokens[tokens_found - 1] = (Token) {TOKEN_INTEGER, {.value.i64val = atoi(value), 0}, best_start, length};
+          break;
+        case TOKEN_FLOAT:
+          tokens[tokens_found - 1] = (Token) {TOKEN_FLOAT, {.value.fval = atof(value), 0}, best_start, length};
           break;
         case TOKEN_STRING:
           trim_edges(value);

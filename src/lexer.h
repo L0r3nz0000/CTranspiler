@@ -69,7 +69,8 @@ typedef enum {
   TOKEN_DECLARE, // @
 
   // Constants and Identifiers
-  TOKEN_NUMBER,      // 123
+  TOKEN_FLOAT,       // 123.45
+  TOKEN_INTEGER,     // 123
   TOKEN_STRING,      // "hello"
   TOKEN_IDENTIFIER,  // variable name, function name
 

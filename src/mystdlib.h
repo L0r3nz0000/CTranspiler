@@ -26,7 +26,7 @@ typedef struct {
   int is_none;
 } Value;
 
-#define NONE (Variable) {0, {0}, 1}
+#define NONE (Value) {0, {0}, 1}
 
 char *typeOf(Value v) {
   switch (v.tag) {
@@ -42,6 +42,21 @@ Value type(Value v) {
   return (Value) {STRING, .value.sval = {typeOf(v), strlen(typeOf(v))}, 0};
 }
 
+Value concat_strings(Value string1, Value string2) {
+  if (string1.tag != STRING || string2.tag != STRING) {
+    printf("Error: Invalid data types for concatenation. Cannot concatenate '%s' and '%s'.\n", typeOf(string1), typeOf(string2));
+    exit(1);
+  }
+
+  int size = string1.value.sval.size + string2.value.sval.size;
+  char *str = (char *) malloc(size + 1);
+  strncpy(str, string1.value.sval.str, string1.value.sval.size);
+  strncpy(str + string1.value.sval.size, string2.value.sval.str, string2.value.sval.size);
+  str[size] = '\0';
+
+  return (Value) {STRING, .value.sval = {str, size}, 0};
+}
+
 Value add_operator(Value a, Value b) {  // Operatore +
   if (a.tag == INT && b.tag == INT) {
     return (Value) {INT, .value.i64val = a.value.i64val + b.value.i64val, 0};
@@ -51,6 +66,8 @@ Value add_operator(Value a, Value b) {  // Operatore +
     return (Value) {FLOAT, .value.i64val = a.value.i64val + b.value.fval, 0};
   } else  if (a.tag == FLOAT && b.tag == INT) {
     return (Value) {FLOAT, .value.i64val = a.value.fval + b.value.i64val, 0};
+  } else if (a.tag == STRING && b.tag == STRING) {
+    return concat_strings(a, b);
   } else {
     printf("Error: Invalid data types for '+' operator. Cannot add '%s' and '%s'.\n", typeOf(a), typeOf(b));
     exit(1);
@@ -81,6 +98,28 @@ Value mul_operator(Value a, Value b) {  // Operatore *
     return (Value) {FLOAT, .value.i64val = a.value.i64val * b.value.fval, 0};
   } else  if (a.tag == FLOAT && b.tag == INT) {
     return (Value) {FLOAT, .value.i64val = a.value.fval * b.value.i64val, 0};
+  } else if (a.tag == STRING && b.tag == INT) {
+    if (b.value.i64val < 0) {
+      printf("Error: Cannot multiply string by negative number.\n");
+      exit(1);
+    }
+    Value result = {STRING, .value.sval = {"", 0}, 0};
+
+    for (int i = 0; i < b.value.i64val; i++) {
+      result = concat_strings(result, a);
+    }
+    return result;
+  } else if (a.tag == INT && b.tag == STRING) {
+    if (a.value.i64val < 0) {
+      printf("Error: Cannot multiply string by negative number.\n");
+      exit(1);
+    }
+    Value result = {STRING, .value.sval = {"", 0}, 0};
+
+    for (int i = 0; i < a.value.i64val; i++) {
+      result = concat_strings(result, b);
+    }
+    return result;
   } else {
     printf("Error: Invalid data types for '*' operator. Cannot multiply '%s' and '%s'.\n", typeOf(a), typeOf(b));
     exit(1);
