@@ -44,7 +44,7 @@ typedef struct {
 } PROGRAM;
 
 typedef struct { VarType type; char *name; } AST_VAR;
-typedef struct { char* name; AST *value; } AST_ASSIGN;  // usare AST_VAR per il nome
+typedef struct { char* name; AST *value; } AST_ASSIGN;  // TODO: usare AST_VAR per il nome
 
 typedef struct { int32_t number; } AST_INT;
 typedef struct { float number; } AST_FLOAT;
@@ -54,11 +54,14 @@ typedef struct { char *filename; } AST_SYSTEM_IMPORT;
 
 typedef struct { AST *left; AST *right; TokenType type; } AST_CONDITION;
 typedef struct { AST *condition; AST_BLOCK *body; } AST_IF;
+typedef AST_IF AST_WHILE;
+typedef struct { AST *init; AST *condition; AST *step; AST_BLOCK *body; } AST_FOR;
 
-typedef struct { VarType ret_type; AST *left; AST *right; } AST_ADD;
-typedef struct { VarType ret_type; AST *left; AST *right; } AST_SUB;
-typedef struct { VarType ret_type; AST *left; AST *right; } AST_MUL;
-typedef struct { VarType ret_type; AST *left; AST *right; } AST_DIV;
+typedef struct { VarType ret_type; AST *left; AST *right; } BINARY_OP;
+typedef BINARY_OP AST_ADD;
+typedef BINARY_OP AST_SUB;
+typedef BINARY_OP AST_MUL;
+typedef BINARY_OP AST_DIV;
 
 typedef struct {
   VarType ret_type;       // Return type
@@ -97,6 +100,8 @@ typedef enum {
   TAG_VAR,
   TAG_SYSTEM_IMPORT,
   TAG_IF,
+  TAG_WHILE,
+  TAG_FOR,
   TAG_CONDITION,
 } AST_TAG;
 
@@ -116,6 +121,8 @@ typedef struct AST {
     AST_SYSTEM_IMPORT ast_system_import;
     AST_IF ast_if;
     AST_CONDITION ast_condition;
+    AST_WHILE ast_while;
+    AST_FOR ast_for;
     
     AST_ADD ast_add;
     AST_SUB ast_sub;

@@ -195,6 +195,32 @@ AST *new_ast_if(AST *condition, AST_BLOCK *body) {
   });
 }
 
+AST *new_ast_for(AST *init, AST *condition, AST *step, AST_BLOCK *body) {
+  return new_ast((AST) {
+    .tag = TAG_FOR,
+    .data = {
+      .ast_for = {
+        .init = init,
+        .condition = condition,
+        .step = step,
+        .body = body,
+      },
+    },
+  });
+}
+
+AST *new_ast_while(AST *condition, AST_BLOCK *body) {
+  return new_ast((AST) {
+    .tag = TAG_WHILE,
+    .data = {
+      .ast_while = {
+        .condition = condition,
+        .body = body,
+      },
+    },
+  });
+}
+
 AST *new_ast_condition(AST *left, AST *right, TokenType type) {
   return new_ast((AST) {
     .tag = TAG_CONDITION,
@@ -327,6 +353,10 @@ TokenList slice(TokenList tl, int start, int elements) {
   return (TokenList) { .tokens = &tl.tokens[start], .size = elements };
 }
 
+TokenList slice_from_to(TokenList tl, int start, int end) {
+  return slice(tl, start, end - start);
+}
+
 size_t find_next_comma(TokenList tl, size_t j) {
   if (j >= tl.size) return -1; // Evita accessi fuori limite
   TokenList sublist = slice(tl, j + 1, tl.size - (j + 1)); 
@@ -342,12 +372,63 @@ int max(int a, int b) {
   return a > b ? a : b;
 }
 
-TokenList extract_block(TokenList tl) {
-  size_t start = find(tl, TOKEN_LBRACE); // Trova '{'
-  if (start >= tl.size) return (TokenList){ .tokens = NULL, .size = 0 }; // Nessun blocco trovato
+TokenList extract_tokens(TokenList tl, TokenType open, TokenType close) {
+  size_t start = find(tl, open); // Trova inizio blocco
+  if (start >= tl.size) {
+    fprintf(stderr, "Errore: blocco non trovato\n");
+    return (TokenList){ .tokens = NULL, .size = 0 }; // Nessun blocco trovato
+  }
 
   int brace_count = 1; // Conta i blocchi annidati
   size_t end = start + 1;
+
+  while (end < tl.size && brace_count > 0) {
+    if (tl.tokens[end].type == open) brace_count++;
+    if (tl.tokens[end].type == close) brace_count--;
+
+    end++;
+  }
+
+  if (brace_count != 0) {
+    printf("Blocco non chiuso correttamente\n");
+    return (TokenList){ .tokens = NULL, .size = 0 }; // Blocco non chiuso correttamente
+  }
+
+  // Slice tra '{' e '}', escludendo le parentesi
+  return slice(tl, start + 1, (end - start - 2));
+}
+
+
+TokenList extract_block(TokenList tl) {
+  TokenList tokens = extract_tokens(tl, TOKEN_LBRACE, TOKEN_RBRACE);
+  if (tokens.tokens == NULL) {
+    fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
+    exit(1);
+  }
+}
+
+TokenList extract_parentheses(TokenList tl) {
+  TokenList tokens = extract_tokens(tl, TOKEN_LPAREN, TOKEN_RPAREN);
+  if (tokens.tokens == NULL) {
+    fprintf(stderr, "Errore: parentesi ( ) non chiuse correttamente\n");
+    exit(1);
+  }
+}
+
+// TokenList extract_brackets(TokenList tl) {
+//   TokenList tokens = extract_tokens(tl, TOKEN_LBRACKET, TOKEN_RBRACKET);
+//   if (tokens.tokens == NULL) {
+//     fprintf(stderr, "Errore: parentesi quadre [ ] non chiuse correttamente\n");
+//     exit(1);
+//   }
+// }
+
+int find_block_end(TokenList tl) {
+  size_t start = find(tl, TOKEN_LBRACE); // Trova '{'
+  if (start >= tl.size) return -1; // Nessun blocco trovato
+
+  int brace_count = 1;
+  int end = start + 1;
 
   while (end < tl.size && brace_count > 0) {
     if (tl.tokens[end].type == TOKEN_LBRACE) brace_count++;
@@ -361,37 +442,13 @@ TokenList extract_block(TokenList tl) {
     exit(1);
   }
 
-  // Slice tra '{' e '}', escludendo le parentesi
-  return slice(tl, start + 1, (end - start - 2));
-}
-
-TokenList extract_parentheses(TokenList tl) {
-  size_t start = find(tl, TOKEN_LPAREN); // Trova '('
-  if (start >= tl.size) return (TokenList){ .tokens = NULL, .size = 0 }; // Nessuna parentesi trovata
-
-  int paren_count = 1; // Conta le parentesi annidate
-  size_t end = start + 1;
-
-  while (end < tl.size && paren_count > 0) {
-    if (tl.tokens[end].type == TOKEN_LPAREN) paren_count++;
-    if (tl.tokens[end].type == TOKEN_RPAREN) paren_count--;
-
-    end++;
-  }
-
-  if (paren_count != 0) {
-    fprintf(stderr, "Errore: parentesi ( ) non chiuse correttamente\n");
-    exit(1);
-  }
-
-  // Slice tra '(' e ')', escludendo le parentesi
-  return slice(tl, start + 1, (end - start - 2));
+  return end - 1;
 }
 
 AST *function_definition(TokenList tl) {
   char *name = tl.tokens[1].value.value.sval; // Nome funzione
   int param_count = 0;
-  char **params = malloc(sizeof(char *) * 6); // Max 6 parametri
+  char **params = malloc(sizeof(char *) * 20); // Max 20 parametri
 
   // Legge i parametri
   int i = 3;  // Salta "fun", il nome e (
@@ -406,6 +463,7 @@ AST *function_definition(TokenList tl) {
 
   // Analizza il blocco codice della funzione
   TokenList body = extract_block(tl);
+
   AST_BLOCK *block = parse_program(body, false);
 
   VarType r_type = VOID;
@@ -439,6 +497,16 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
   AST *left, *right;  // Dichiarazioni per eventuali operatori binari
   VarType t1, t2;  // Used for type deduction
 
+  // Controlla se è una dichiarazione di funzione
+  if (tl.tokens[0].type == TOKEN_FUN && parse_functions) {
+    return function_definition(tl);
+  }
+
+  /*
+  if (i == 10) {
+    Code
+  }
+  */
   if (tl.tokens[0].type == TOKEN_IF) {
     TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
     TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
@@ -446,37 +514,72 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     return new_ast_if(generate_tree(condition, false), parse_program(body, false));
   }
 
-  for (int i = 0; i < tl.size; i++) {
+  /*
+  while (i < 10) {
+    Code
+  }
+  */
+  if (tl.tokens[0].type == TOKEN_WHILE) {
+    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
+    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
 
-    // Gestisce tutte le condizioni binarie
-    if (tl.tokens[i].type == TOKEN_EQUALS || 
-        tl.tokens[i].type == TOKEN_NOT_EQUALS || 
-        tl.tokens[i].type == TOKEN_LESS_EQUALS || 
-        tl.tokens[i].type == TOKEN_GREATER_EQUALS || 
-        tl.tokens[i].type == TOKEN_LESS || 
-        tl.tokens[i].type == TOKEN_GREATER) {
+    return new_ast_while(generate_tree(condition, false), parse_program(body, false));
+  }
 
-      TokenList operand1 = slice(tl, 0, i);
-      TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
+  /*
+  for (@i = 0 to 10 step 1) {
+    Code
+  }
+  */
+  if (tl.tokens[0].type == TOKEN_FOR) {
+    TokenList header = extract_parentheses(tl);
+    TokenList body = extract_block(tl);
 
-      return new_ast_condition(generate_tree(operand1, false), generate_tree(operand2, false), tl.tokens[i].type);
+    printf("Header: \n");
+    print_token_list(header);
+
+    TokenList init = slice_from_to(header, 0, find(header, TOKEN_TO));
+    TokenList to = slice_from_to(header, find(header, TOKEN_TO) + 1, find(header, TOKEN_STEP));
+    TokenList step = slice_from_to(header, find(header, TOKEN_STEP) + 1, header.size);
+
+    AST *init_ast = generate_tree(init, false);
+    AST *to_ast = generate_tree(to, false);
+    AST *step_ast = generate_tree(step, false);
+    TokenType condition_type = -1;
+
+    AST *start_value = NULL;
+
+    if (to_ast->tag != TAG_INT || (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN)) {
+      printf("Errore: inizializzazione del ciclo for non valida\n");
+      exit(1);
+    } else {
+      if (init_ast->tag == TAG_DECLARE) {
+        VarType type = init_ast->data.ast_declare.type;
+        char *name = init_ast->data.ast_declare.name;
+        start_value = new_ast_var(type, name);
+      } else {
+        char *name = init_ast->data.ast_assign.name;
+        start_value = new_ast_var(typeOf(init_ast->data.ast_assign.value), name);
+      }
     }
-  }
 
-  if (tl.tokens[0].type == TOKEN_STRING) {
-    return new_ast_string(tl.tokens[0].value.value.sval);
-  }
+    float step_value = 1;
+    if (step_ast->tag == TAG_INT) {
+      step_value = step_ast->data.ast_int.number;
+    } else if (step_ast->tag == TAG_FLOAT) {
+      step_value = step_ast->data.ast_float.number;
+    }
 
-  if (tl.tokens[0].type == TOKEN_RETURN) {
-    // Considera i token successivi come espressione di ritorno
-    TokenList return_expr = { .tokens = &tl.tokens[1], .size = tl.size - 1 };
-    AST *value = generate_tree(return_expr, false);  // Genera l'espressione che viene restituita
-    return new_ast_return(value);  // Crea il nodo return
-  }
+    if (step_value < 0) {
+      condition_type = TOKEN_GREATER_EQUALS;
+    } else {
+      condition_type = TOKEN_LESS;
+    }
+    
+    step_ast = new_ast_add(FLOAT, step_ast, new_ast_int64(step_value));
+    AST *condition_ast = new_ast_condition(start_value, to_ast, condition_type);
 
-  // Controlla se è una dichiarazione di funzione
-  if (tl.tokens[0].type == TOKEN_FUN && parse_functions) {
-    return function_definition(tl);
+    return new_ast_for(init_ast, condition_ast, generate_tree(step, false), parse_program(body, false));
   }
 
   // Controlla se è una chiamata di funzione
@@ -484,15 +587,14 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     if (tl.tokens[i].type == TOKEN_IDENTIFIER && tl.tokens[i + 1].type == TOKEN_LPAREN) {
       char *name = tl.tokens[i].value.value.sval;
       int arg_count = 0;
-      AST **args = malloc(sizeof(AST *) * 6);
+      AST **args = malloc(sizeof(AST *) * 20);
 
       int call_end = -1;  // Contiene l'indice della parentesi di chiusura
       int paren_depth = 0;
 
-      printf("Cerco le parentesi di %s\n", name);
       for (int j = i + 1; j < tl.size; j++) {
-        if (tl.tokens[j].type == TOKEN_LPAREN) {paren_depth++; printf("(");}
-        if (tl.tokens[j].type == TOKEN_RPAREN) {paren_depth--; printf(")");}
+        if (tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
+        if (tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
 
         if (paren_depth == 0) {
           call_end = j;
@@ -505,20 +607,16 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
         exit(1);
       }
 
-      printf("Inizio chiamata a %s: %d\n", name, i + 2);
-      printf("Fine chiamata a %s: %d\n", name, call_end);
-
       int first_param = i + 2;
       int j = first_param;
       while (j < call_end) {
         if (tl.tokens[j].type == TOKEN_IDENTIFIER && tl.tokens[j + 1].type == TOKEN_LPAREN) {  // Chiamata a funzione
-          printf("\tParametro (chiamata alla funzione): %s\n", tl.tokens[j].value.value.sval);
           int end = -1;
 
           paren_depth = 0;
           for (int h = j + 1; h < tl.size; h++) {
-            if (tl.tokens[h].type == TOKEN_LPAREN) {paren_depth++; printf("(");}
-            if (tl.tokens[h].type == TOKEN_RPAREN) {paren_depth--; printf(")");}
+            if (tl.tokens[h].type == TOKEN_LPAREN) paren_depth++;
+            if (tl.tokens[h].type == TOKEN_RPAREN) paren_depth--;
 
             if (paren_depth == 0) {
               end = h;
@@ -530,7 +628,6 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
           j += end + 1;
           
         } else {
-          printf("\tParametro (other): ");
           print_token_list(slice(tl, j, 1));
 
           int end = find_next_comma(tl, j);
@@ -538,16 +635,17 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
           args[arg_count++] = generate_tree(slice(tl, j, end - j), false);
           j = end;
         }
-        
-        printf("argomenti: %d\n", arg_count);
-        printf("call_end: %d\n", call_end);
-        printf("j: %d\n", j);
-        printf("tl.tokens[j].type: %d\n", tl.tokens[j].type);
       }
 
       return new_ast_call(name, args, arg_count);
     }
+  }
 
+  if (tl.tokens[0].type == TOKEN_RETURN) {
+    // Considera i token successivi come espressione di ritorno
+    TokenList return_expr = { .tokens = tl.tokens + 1, .size = tl.size - 1 };
+    AST *value = generate_tree(return_expr, false);  // Genera l'espressione che viene restituita
+    return new_ast_return(value);  // Crea il nodo return
   }
 
   for (int i = 0; i < tl.size; i++) {  // Operatore =
@@ -571,22 +669,14 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
       case TOKEN_SUM:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        printf("chiamo typeOf passando come left:");
-        print_token_list((TokenList) {tl.tokens, i});
         t1 = typeOf(left);
-        printf("chiamo typeOf passando come right:");
-        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
         t2 = typeOf(right);
         return new_ast_add((t1 == INT && t2 == INT) ? INT : FLOAT, left, right);
       break;
       case TOKEN_SUB:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        printf("chiamo typeOf passando come left:");
-        print_token_list((TokenList) {tl.tokens, i});
         t1 = typeOf(left);
-        printf("chiamo typeOf passando come right:");
-        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
         t2 = typeOf(right);
         return new_ast_sub((t1 == INT && t2 == INT) ? INT : FLOAT, left, right);
       break;
@@ -614,12 +704,34 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     }
   }
 
+  for (int i = 0; i < tl.size; i++) {
+
+    // Gestisce tutte le condizioni binarie
+    if (tl.tokens[i].type == TOKEN_EQUALS || 
+        tl.tokens[i].type == TOKEN_NOT_EQUALS || 
+        tl.tokens[i].type == TOKEN_LESS_EQUALS || 
+        tl.tokens[i].type == TOKEN_GREATER_EQUALS || 
+        tl.tokens[i].type == TOKEN_LESS || 
+        tl.tokens[i].type == TOKEN_GREATER) {
+
+      TokenList operand1 = slice(tl, 0, i);
+      TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
+      printf("trovato operatore binario\n");
+
+      return new_ast_condition(generate_tree(operand1, false), generate_tree(operand2, false), tl.tokens[i].type);
+    }
+  }
+
   if (tl.tokens[0].type == TOKEN_NUMBER) {
     return new_ast_int64(tl.tokens[0].value.value.i32val);
   }
 
   if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
     return new_ast_var(INT, tl.tokens[0].value.value.sval);  // ! Usare una tabella dei tipi per determinare il tipo della variabile
+  }
+
+  if (tl.tokens[0].type == TOKEN_STRING) {
+    return new_ast_string(tl.tokens[0].value.value.sval);
   }
 
   return NULL;
@@ -670,8 +782,7 @@ AST_BLOCK *define_all_functions(TokenList tl) {
     fun_index = find(tl, TOKEN_FUN);    // Inizio della definizione di funzione
     if (fun_index == -1) break;
 
-    // TODO: tenere in condiserazione la profondità delle parentesi
-    block_end = find(tl, TOKEN_RBRACE); // Fine della definizione di funzione con }
+    block_end = find_block_end(slice(tl, fun_index, tl.size - fun_index));  // Cerca la } di chiusura
 
     if (block_end == -1) {
       fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
@@ -716,14 +827,12 @@ SYMBOL_TABLE *find_symbols(TokenList tl) {
 
 
 /*
-
-parse_functions = true
+parse_functions = false
   ritorna AST_BLOCK *
 
-parse_functions = false
+parse_functions = true
   ritorna PROGRAM *
   (AST_BLOCK + SYMBOL_TABLE)
-
 */
 void *parse_program(TokenList tl, bool parse_functions) {
   if (tl.size == 0) return NULL;
@@ -759,21 +868,29 @@ void *parse_program(TokenList tl, bool parse_functions) {
     *program = (PROGRAM) {block, symbol_table, symbol_table->count};
     return program;
   } else {
-    // Analizza il resto del programma
+    // Analizza un blocco di codice
     int start = 0;
+
     for (int i = 0; i < tl.size; i++) {  // Itera per i token
+      if (tl.tokens[i].type == TOKEN_IF || tl.tokens[i].type == TOKEN_WHILE || tl.tokens[i].type == TOKEN_FOR) {
+        int end = find_block_end(slice(tl, i, tl.size - i));
+        if (end == -1) {
+          fprintf(stderr, "Errore: blocco if mai aperto\n");
+          exit(1);
+        }
+        end += i;
+        TokenList sublist = slice(tl, i, end - i + 1);
+        add_ast_to_block(block, generate_tree(sublist, false));
+        i = end;
+        start = end + 1;
+      }
+
       if (tl.tokens[i].type == TOKEN_EOL) { // Nuova riga
         TokenList sublist = { .tokens = &tl.tokens[start], .size = i - start };
-        // Genera un albero AST per la sottolista di token e aggiungilo al blocco
+        // Genera un albero AST per la sottolista di token
         add_ast_to_block(block, generate_tree(sublist, false));
         start = i + 1;
       }
-    }
-
-    // Se c'è ancora un'espressione non processata (l'ultima riga)
-    if (start < tl.size) {
-      TokenList sublist = { .tokens = &tl.tokens[start], .size = tl.size - start };
-      add_ast_to_block(block, generate_tree(sublist, false));
     }
   }
 
@@ -787,7 +904,7 @@ void print_tree(AST *node, int indent) {
 
   // Stampa l'indentazione
   for (int i = 0; i < indent; i++) {
-    printf("  ");
+    printf("|  ");
   }
 
   // Stampa il nodo in base al tipo
@@ -831,12 +948,12 @@ void print_tree(AST *node, int indent) {
     case TAG_FUN:
       printf("\nFunction: %s (params: %d)\n", node->data.ast_funct.name, node->data.ast_funct.param_count);
       for (int i = 0; i < node->data.ast_funct.param_count; i++) {
-        for (int j = 0; j < indent + 1; j++) printf("  ");
+        for (int j = 0; j < indent + 1; j++) printf("|  ");
         printf("Param: %s\n", node->data.ast_funct.params[i]);
       }
       // Stampa il blocco di codice
       if (node->data.ast_funct.body->count == 0 || node->data.ast_funct.body->statements == NULL) {
-        printf("  (Empty function body)\n");
+        printf("|  (Empty function body)\n");
       } else {
         for (int i = 0; i < node->data.ast_funct.body->count; i++) {
           print_tree(node->data.ast_funct.body->statements[i], indent + 1);
@@ -864,10 +981,50 @@ void print_tree(AST *node, int indent) {
     case TAG_IF:
       printf("If\n");
       print_tree(node->data.ast_if.condition, indent + 1);
-      print_tree(node->data.ast_if.body, indent + 1);
+
+      for (int i = 0; i < node->data.ast_if.body->count; i++) {
+        print_tree(node->data.ast_if.body->statements[i], indent + 1);
+      }
       break;
+    case TAG_WHILE:
+      printf("While\n");
+      print_tree(node->data.ast_while.condition, indent + 1);
+
+      for (int i = 0; i < node->data.ast_while.body->count; i++) {
+        print_tree(node->data.ast_while.body->statements[i], indent + 1);
+      }
+      break;
+    case TAG_FOR:
+      printf("For\n");
+      print_tree(node->data.ast_for.init, indent + 1);
+      print_tree(node->data.ast_for.step, indent + 1);
+      print_tree(node->data.ast_for.condition, indent + 1);
+
+      for (int i = 0; i < node->data.ast_for.body->count; i++) {
+        print_tree(node->data.ast_for.body->statements[i], indent + 1);
+      }
     case TAG_CONDITION:
-      printf("Condition\n");
+      printf("Condition: ");
+      switch (node->data.ast_condition.type) {
+        case TOKEN_EQUALS:
+          printf("'=='\n");
+          break;
+        case TOKEN_NOT_EQUALS:
+          printf("'!='\n");
+          break;
+        case TOKEN_LESS:
+          printf("'<'\n");
+          break;
+        case TOKEN_GREATER:
+          printf("'>'\n");
+          break;
+        case TOKEN_LESS_EQUALS:
+          printf("'<='\n");
+          break;
+        case TOKEN_GREATER_EQUALS:
+          printf("'>='\n");
+          break;
+      }
       print_tree(node->data.ast_condition.left, indent + 1);
       print_tree(node->data.ast_condition.right, indent + 1);
       break;

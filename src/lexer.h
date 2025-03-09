@@ -24,12 +24,26 @@ typedef struct {
   int is_none;
 } Value;
 
+
+/*
+for (i = 0 to 10 step 1) {
+  # Blocco di codice
+}
+*/
+
 typedef enum {
   // Keywords
   TOKEN_IMPORT,  // import
   TOKEN_FUN,     // fun
   TOKEN_RETURN,  // <-
-  TOKEN_IF,      // if (aggiungere else)
+  TOKEN_IF,      // if
+  // TODO: implementare blocco else
+  TOKEN_ELSE,    // else
+  TOKEN_WHILE,   // while
+  // TODO: implementare istruzione break e continue
+  TOKEN_FOR,     // for
+  TOKEN_TO,      // to
+  TOKEN_STEP,    // step
 
   TOKEN_EQUALS,           // ==
   TOKEN_NOT_EQUALS,       // !=

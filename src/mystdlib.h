@@ -102,6 +102,113 @@ Value div_operator(Value a, Value b) {  // Operatore /
   }
 }
 
+int is_equal(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val == b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval == b.value.fval;
+  } else if (a.tag == STRING && b.tag == STRING) {
+    return strcmp(a.value.sval.str, b.value.sval.str) == 0;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval == b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '==' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+int is_not_equal(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val != b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval != b.value.fval;
+  } else if (a.tag == STRING && b.tag == STRING) {
+    return strcmp(a.value.sval.str, b.value.sval.str) != 0;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval != b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '!=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+int is_less(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val < b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval < b.value.fval;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval < b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '<' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+int is_greater(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val > b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval > b.value.fval;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval > b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '>' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+int is_less_or_equal(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val <= b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval <= b.value.fval;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval <= b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '<=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+int is_greater_or_equal(Value a, Value b) {
+  if (a.tag == INT && b.tag == INT) {
+    return a.value.i64val >= b.value.i64val;
+  } else if (a.tag == FLOAT && b.tag == FLOAT) {
+    return a.value.fval >= b.value.fval;
+  } else if (a.tag == CHAR && b.tag == CHAR) {
+    return a.value.cval >= b.value.cval;
+  } else {
+    printf("Error: Invalid data types for '>=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    exit(1);
+  }
+}
+
+Value toFloat(Value v) {
+  if (v.tag == FLOAT) {
+    return v;
+  } else if (v.tag == INT) {
+    return (Value) {FLOAT, .value.fval = (float)v.value.i64val, 0};
+  } else if (v.tag == STRING) {
+    float num = atof(v.value.sval.str);
+    if (num == 0) {
+      printf("Error: Cannot convert '%s' to float.\n", v.value.sval.str);
+      exit(1);
+    }
+    return (Value) {FLOAT, .value.fval = num, 0};
+  } else if (v.tag == CHAR) {
+    if (v.value.cval >= '0' && v.value.cval <= '9') {
+      return (Value) {FLOAT, .value.fval = v.value.cval - '0', 0};
+    } else {
+      printf("Error: Cannot convert '%c' to float.\n", v.value.cval);
+      exit(1);
+    }
+  } else {
+    printf("Error: Cannot convert '%s' to float.\n", typeOf(v));
+    exit(1);
+  }
+}
+
 Value toInt(Value v) {
   if (v.tag == INT) {
     return v;
@@ -123,6 +230,48 @@ Value toInt(Value v) {
     }
   } else {
     printf("Error: Cannot convert '%s' to int.\n", typeOf(v));
+    exit(1);
+  }
+}
+
+Value toChar(Value v) {
+  if (v.tag == CHAR) {
+    return v;
+  } else if (v.tag == INT) {
+    return (Value) {CHAR, .value.cval = v.value.i64val, 0};
+  } else if (v.tag == FLOAT) {
+    return (Value) {CHAR, .value.cval = (char)v.value.fval, 0};
+  } else if (v.tag == STRING) {
+    if (strlen(v.value.sval.str) == 1) {
+      return (Value) {CHAR, .value.cval = v.value.sval.str[0], 0};
+    } else {
+      printf("Error: Cannot convert '%s' to char.\n", v.value.sval.str);
+      exit(1);
+    }
+  } else {
+    printf("Error: Cannot convert '%s' to char.\n", typeOf(v));
+    exit(1);
+  }
+}
+
+Value toStr(Value v) {
+  if (v.tag == STRING) {
+    return v;
+  } else if (v.tag == INT) {
+    char *str = (char *) malloc(20);
+    sprintf(str, "%ld", v.value.i64val);
+    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+  } else if (v.tag == FLOAT) {
+    char *str = (char *) malloc(20);
+    sprintf(str, "%f", v.value.fval);
+    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+  } else if (v.tag == CHAR) {
+    char *str = (char *) malloc(2);
+    str[0] = v.value.cval;
+    str[1] = '\0';
+    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+  } else {
+    printf("Error: Cannot convert '%s' to string.\n", typeOf(v));
     exit(1);
   }
 }

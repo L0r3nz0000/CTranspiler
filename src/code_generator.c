@@ -25,10 +25,6 @@ void print_type(VarType t) {
 }
 
 void generate_function_call(AST_CALL ast, FILE *f) {
-  // DEBUG
-  printf("Calling function: %s\n", ast.name);
-  printf("Arguments: %d\n", ast.arg_count);
-
   fprintf(f, "%s(", ast.name);
 
   for (int i = 0; i < ast.arg_count; i++) {
@@ -42,8 +38,12 @@ void generate_function_call(AST_CALL ast, FILE *f) {
 }
 
 void define_function(AST_FUNCT ast, FILE *f) {
-  printf("Defining: ");
-  printf("Value %s(", ast.name);
+  printf("Function: ");
+  if (strcmp(ast.name, "main") == 0) {
+    printf("int main(");
+  } else {
+    printf("Value %s(", ast.name);
+  }
 
   for (int i = 0; i < ast.param_count; i++) {
     printf("Value %s", ast.params[i]);
@@ -84,6 +84,84 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
       fprintf(f, "#include <%s>\n", data.filename);
       return;
     }
+    case TAG_IF: {
+      AST_IF data = ast->data.ast_if;
+      fprintf(f, "if (");
+      generate_code(data.condition, f, false, false);
+      fprintf(f, ") {\n");
+
+      for (int i = 0; i < data.body->count; i++) {
+        generate_code(data.body->statements[i], f, false, false);
+      }
+
+      fprintf(f, "}\n");
+      return;
+    }
+    case TAG_WHILE: {
+      AST_WHILE data = ast->data.ast_while;
+      fprintf(f, "while (");
+      generate_code(data.condition, f, false, false);
+      fprintf(f, ") {\n");
+
+      for (int i = 0; i < data.body->count; i++) {
+        generate_code(data.body->statements[i], f, false, false);
+      }
+
+      fprintf(f, "}\n");
+      return;
+    }
+    case TAG_FOR: {
+      AST_FOR data = ast->data.ast_for;
+      generate_code(data.init, f, false, false);
+      fprintf(f, "while (");
+      generate_code(data.condition, f, false, false);
+      fprintf(f, ") {\n");
+
+      for (int i = 0; i < data.body->count; i++) {
+        generate_code(data.body->statements[i], f, false, false);
+      }
+
+      if (data.init->tag == TAG_ASSIGN) {
+        fprintf(f, "%s = add_operator(%s, ", data.init->data.ast_assign.name, data.init->data.ast_assign.name);
+      } else if (data.init->tag == TAG_DECLARE) {
+        fprintf(f, "%s = add_operator(%s, ", data.init->data.ast_declare.name, data.init->data.ast_declare.name);
+      }
+      generate_code(data.step, f, false, false);
+      fprintf(f, ");\n");
+
+      fprintf(f, "}\n");
+      return;
+    }
+    case TAG_CONDITION: {
+      AST_CONDITION data = ast->data.ast_condition;
+
+      switch (data.type) {
+        case TOKEN_EQUALS:
+          fprintf(f, "is_equal(");
+          break;
+        case TOKEN_NOT_EQUALS:
+          fprintf(f, "is_not_equal(");
+          break;
+        case TOKEN_LESS:
+          fprintf(f, "is_less(");
+          break;
+        case TOKEN_GREATER:
+          fprintf(f, "is_greater(");
+          break;
+        case TOKEN_LESS_EQUALS:
+          fprintf(f, "is_less_or_equal(");
+          break;
+        case TOKEN_GREATER_EQUALS:
+          fprintf(f, "is_greater_or_equal(");
+          break;
+      }
+
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
+      return;
+    }
     case TAG_VAR: {
       AST_VAR data = ast->data.ast_var;
       fprintf(f, "%s", data.name);
@@ -91,17 +169,17 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_INT: {
       AST_INT data = ast->data.ast_int;
-      fprintf(f, "(Value) {INT, .value.i64val = %d, 0}", data.number);
+      fprintf(f, "((Value) {INT, .value.i64val = %d, 0})", data.number);
       return;
     }
     case TAG_FLOAT: {
       AST_FLOAT data = ast->data.ast_float;
-      fprintf(f, "(Value) {FLOAT, .value.fval = %f, 0}", data.number);
+      fprintf(f, "((Value) {FLOAT, .value.fval = %f, 0})", data.number);
       return;
     }
     case TAG_STRING: {
       AST_STRING data = ast->data.ast_string;
-      fprintf(f, "(Value) {STRING, .value.sval = {\"%s\", %d}, 0}", data.string, strlen(data.string));
+      fprintf(f, "((Value) {STRING, .value.sval = {\"%s\", %d}, 0})", data.string, strlen(data.string));
       return;
     }
     case TAG_FUN: {
@@ -131,7 +209,7 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_ASSIGN: {
       AST_ASSIGN data = ast->data.ast_assign;
-      fprintf(f, "Value %s = ", data.name);
+      fprintf(f, "%s = ", data.name);
       generate_code(data.value, f, false, false);
       fprintf(f, ";\n");
       return;
@@ -140,21 +218,6 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
       AST_DECLARE data = ast->data.ast_declare;
 
       fprintf(f, "Value %s = ", data.name);
-      
-      // switch (typeOf(data.value)) {
-      //   case INT:
-      //     fprintf(f, "Value %s = (Value) {INT, .value.i64val = ", data.name);
-      //     break;
-      //   case FLOAT:
-      //     fprintf(f, "Value %s = (Value) {FLOAT, .value.fval = ", data.name);
-      //     break;
-      //   case CHAR:
-      //     fprintf(f, "Value %s = (Value) {CHAR, .value.cval = ", data.name);
-      //     break;
-      //   case STRING:
-      //     fprintf(f, "Value %s = (Value) {STRING, .value.sval = ", data.name);
-      //     break;
-      // }
 
       generate_code(data.value, f, false, false);
       fprintf(f, ";\n");

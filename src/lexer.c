@@ -7,6 +7,11 @@ const char* TOKEN_PATTERNS[] = {
   "\\bfun\\b",     // TOKEN_FUN
   "<-",            // TOKEN_RETURN
   "if",            // TOKEN_IF
+  "else",          // TOKEN_ELSE
+  "while",         // TOKEN_WHILE
+  "for",           // TOKEN_FOR
+  "\\bto\\b",      // TOKEN_TO
+  "\\bstep\\b",    // TOKEN_STEP
 
   "==",            // TOKEN_EQUALS
   "!=",            // TOKEN_NOT_EQUALS
@@ -39,6 +44,11 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_FUN",
   "TOKEN_RETURN",
   "TOKEN_IF",
+  "TOKEN_ELSE",
+  "TOKEN_WHILE",
+  "TOKEN_FOR",
+  "TOKEN_TO",
+  "TOKEN_STEP",
 
   "TOKEN_EQUALS",
   "TOKEN_NOT_EQUALS",

@@ -74,6 +74,7 @@
     "cmath": "c",
     "stdio.h": "c",
     "typeinfo": "c",
-    "stdint.h": "c"
+    "stdint.h": "c",
+    "preprocessor.h": "c"
   }
 }

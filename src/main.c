@@ -66,14 +66,11 @@ int main(int argc, char *argv[]) {
 
   printf("loading code: \n\n%s\n\n", code);
 
-  // Preprocess the code
-  proprocess(code);
-
   // Tokenize the code
   TokenList tokens = tokenize_code(code);
 
-  // print_token_list(tokens);
-  // printf("\n");
+  print_token_list(tokens);
+  printf("\n");
 
   PROGRAM *program = parse_program(tokens, true);
 
