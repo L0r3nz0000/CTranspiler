@@ -24,13 +24,6 @@ typedef struct {
   int is_none;
 } Value;
 
-
-/*
-for (i = 0 to 10 step 1) {
-  # Blocco di codice
-}
-*/
-
 typedef enum {
   // Keywords
   TOKEN_IMPORT,  // import
@@ -59,6 +52,7 @@ typedef enum {
   TOKEN_SUB,     // -
   TOKEN_MUL,     // *
   TOKEN_DIV,     // /
+  TOKEN_PERCENT, // %
   TOKEN_ASSIGN,  // =
 
   // Delimiters

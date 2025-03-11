@@ -57,11 +57,13 @@ typedef struct { AST *condition; AST_BLOCK *body; } AST_IF;
 typedef AST_IF AST_WHILE;
 typedef struct { AST *init; AST *condition; AST *step; AST_BLOCK *body; } AST_FOR;
 
+// Operatori binari
 typedef struct { VarType ret_type; AST *left; AST *right; } BINARY_OP;
 typedef BINARY_OP AST_ADD;
 typedef BINARY_OP AST_SUB;
 typedef BINARY_OP AST_MUL;
 typedef BINARY_OP AST_DIV;
+typedef BINARY_OP AST_MOD;
 
 typedef struct {
   VarType ret_type;       // Return type
@@ -91,6 +93,7 @@ typedef enum {
   TAG_SUB,
   TAG_MUL,
   TAG_DIV,
+  TAG_MOD,
   TAG_STRING,
   TAG_FUN,
   TAG_CALL,
@@ -123,11 +126,13 @@ typedef struct AST {
     AST_CONDITION ast_condition;
     AST_WHILE ast_while;
     AST_FOR ast_for;
-    
+
+    // Operatori binari
     AST_ADD ast_add;
     AST_SUB ast_sub;
     AST_MUL ast_mul;
     AST_DIV ast_div;
+    AST_MOD ast_mod;
   } data;
 } AST;
 

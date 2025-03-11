@@ -25,6 +25,7 @@ const char* TOKEN_PATTERNS[] = {
   "-",             // TOKEN_SUB
   "\\*",           // TOKEN_MUL
   "/",             // TOKEN_DIV
+  "%",             // TOKEN_PERCENT
   "=",             // TOKEN_ASSIGN
   "\\(",           // TOKEN_LPAREN
   "\\)",           // TOKEN_RPAREN
@@ -66,6 +67,7 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_SUB",
   "TOKEN_MUL",
   "TOKEN_DIV",
+  "TOKEN_PERCENT",
   "TOKEN_ASSIGN",
   "TOKEN_LPAREN",
   "TOKEN_RPAREN",
@@ -201,12 +203,20 @@ void print_token_list(TokenList tl) {
     printf("(Token) {%s, value: ", TOKEN_NAMES[tl.tokens[i].type]);
     if (tl.tokens[i].type == TOKEN_STRING || tl.tokens[i].type == TOKEN_IDENTIFIER) {
       printf("%s}\n", tl.tokens[i].value.value.sval);
-    } else {
+    } else if (tl.tokens[i].type == TOKEN_INTEGER) {
       if (!tl.tokens[i].value.is_none) {
-        printf("%d}\n", tl.tokens[i].value.value.i32val);
+        printf("%d}\n", tl.tokens[i].value.value.i64val);
       } else {
         printf("NONE}\n");
       }
+    } else if (tl.tokens[i].type == TOKEN_FLOAT) {
+      if (!tl.tokens[i].value.is_none) {
+        printf("%f}\n", tl.tokens[i].value.value.fval);
+      } else {
+        printf("NONE}\n");
+      }
+    } else {
+      printf("NONE}\n");
     }
   }
 }

@@ -86,9 +86,9 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_IF: {
       AST_IF data = ast->data.ast_if;
-      fprintf(f, "if (");
+      fprintf(f, "if (toStdBool(");
       generate_code(data.condition, f, false, false);
-      fprintf(f, ") {\n");
+      fprintf(f, ")) {\n");
 
       for (int i = 0; i < data.body->count; i++) {
         generate_code(data.body->statements[i], f, false, false);
@@ -99,9 +99,9 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_WHILE: {
       AST_WHILE data = ast->data.ast_while;
-      fprintf(f, "while (");
+      fprintf(f, "while (toStdBool(");
       generate_code(data.condition, f, false, false);
-      fprintf(f, ") {\n");
+      fprintf(f, ")) {\n");
 
       for (int i = 0; i < data.body->count; i++) {
         generate_code(data.body->statements[i], f, false, false);
@@ -113,14 +113,16 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     case TAG_FOR: {
       AST_FOR data = ast->data.ast_for;
       generate_code(data.init, f, false, false);
-      fprintf(f, "while (");
+      fprintf(f, "while (toStdBool(");
       generate_code(data.condition, f, false, false);
-      fprintf(f, ") {\n");
+      fprintf(f, ")) {\n");
 
+      // Body del for
       for (int i = 0; i < data.body->count; i++) {
         generate_code(data.body->statements[i], f, false, false);
       }
 
+      // Incremento 
       if (data.init->tag == TAG_ASSIGN) {
         fprintf(f, "%s = add_operator(%s, ", data.init->data.ast_assign.name, data.init->data.ast_assign.name);
       } else if (data.init->tag == TAG_DECLARE) {
@@ -253,6 +255,15 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     case TAG_DIV: {
       AST_DIV data = ast->data.ast_div;
       fprintf(f, "div_operator(");
+      generate_code(data.left, f, false, false);
+      fprintf(f, ", ");
+      generate_code(data.right, f, false, false);
+      fprintf(f, ")");
+      return;
+    }
+    case TAG_MOD: {
+      AST_MOD data = ast->data.ast_mod;
+      fprintf(f, "mod_operator(");
       generate_code(data.left, f, false, false);
       fprintf(f, ", ");
       generate_code(data.right, f, false, false);
