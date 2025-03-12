@@ -86,8 +86,8 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_IF: {
       AST_IF data = ast->data.ast_if;
-      fprintf(f, "if (toStdBool(");
-      generate_code(data.condition, f, false, false);
+      fprintf(f, "if (c_bool(");
+      generate_code(data.condition, f, false, true);
       fprintf(f, ")) {\n");
 
       for (int i = 0; i < data.body->count; i++) {
@@ -99,8 +99,8 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_WHILE: {
       AST_WHILE data = ast->data.ast_while;
-      fprintf(f, "while (toStdBool(");
-      generate_code(data.condition, f, false, false);
+      fprintf(f, "while (c_bool(");
+      generate_code(data.condition, f, false, true);
       fprintf(f, ")) {\n");
 
       for (int i = 0; i < data.body->count; i++) {
@@ -113,8 +113,8 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     case TAG_FOR: {
       AST_FOR data = ast->data.ast_for;
       generate_code(data.init, f, false, false);
-      fprintf(f, "while (toStdBool(");
-      generate_code(data.condition, f, false, false);
+      fprintf(f, "while (c_bool(");
+      generate_code(data.condition, f, false, true);
       fprintf(f, ")) {\n");
 
       // Body del for
@@ -128,7 +128,7 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
       } else if (data.init->tag == TAG_DECLARE) {
         fprintf(f, "%s = add_operator(%s, ", data.init->data.ast_declare.name, data.init->data.ast_declare.name);
       }
-      generate_code(data.step, f, false, false);
+      generate_code(data.step, f, false, true);
       fprintf(f, ");\n");
 
       fprintf(f, "}\n");
@@ -158,9 +158,9 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
           break;
       }
 
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }
@@ -191,6 +191,8 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_CALL: {
       AST_CALL data = ast->data.ast_call;
+      if (nested_call) { printf("chiamata annidata a %s\n", data.name); } else { printf("chiamata non annidata a %s\n", data.name); }
+      
       generate_function_call(data, f);
       if (!nested_call) {
         fprintf(f, ";\n");
@@ -201,10 +203,12 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
       AST_RETURN data = ast->data.ast_return;
 
       if (main) {
-        fprintf(f, "return 0;\n");
+        fprintf(f, "return c_int(");
+        generate_code(data.value, f, false, true);
+        fprintf(f, ");\n");
       } else {
         fprintf(f, "return ");
-        generate_code(data.value, f, false, false);
+        generate_code(data.value, f, false, true);
         fprintf(f, ";\n");
       }
       return;
@@ -212,7 +216,7 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     case TAG_ASSIGN: {
       AST_ASSIGN data = ast->data.ast_assign;
       fprintf(f, "%s = ", data.name);
-      generate_code(data.value, f, false, false);
+      generate_code(data.value, f, false, true);
       fprintf(f, ";\n");
       return;
     }
@@ -221,52 +225,52 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
 
       fprintf(f, "Value %s = ", data.name);
 
-      generate_code(data.value, f, false, false);
+      generate_code(data.value, f, false, true);
       fprintf(f, ";\n");
       return;
     }
     case TAG_ADD: {
       AST_ADD data = ast->data.ast_add;
       fprintf(f, "add_operator(");
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }
     case TAG_SUB: {
       AST_SUB data = ast->data.ast_sub;
       fprintf(f, "sub_operator(");
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }
     case TAG_MUL: {
       AST_MUL data = ast->data.ast_mul;
       fprintf(f, "mul_operator(");
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }
     case TAG_DIV: {
       AST_DIV data = ast->data.ast_div;
       fprintf(f, "div_operator(");
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }
     case TAG_MOD: {
       AST_MOD data = ast->data.ast_mod;
       fprintf(f, "mod_operator(");
-      generate_code(data.left, f, false, false);
+      generate_code(data.left, f, false, true);
       fprintf(f, ", ");
-      generate_code(data.right, f, false, false);
+      generate_code(data.right, f, false, true);
       fprintf(f, ")");
       return;
     }

@@ -6,10 +6,10 @@ const char* TOKEN_PATTERNS[] = {
   "\\bimport\\b",  // TOKEN_IMPORT
   "\\bfun\\b",     // TOKEN_FUN
   "<-",            // TOKEN_RETURN
-  "if",            // TOKEN_IF
+  "\\bif",         // TOKEN_IF
   "else",          // TOKEN_ELSE
-  "while",         // TOKEN_WHILE
-  "for",           // TOKEN_FOR
+  "\\bwhile",      // TOKEN_WHILE
+  "\\bfor\\b",     // TOKEN_FOR
   "\\bto\\b",      // TOKEN_TO
   "\\bstep\\b",    // TOKEN_STEP
 

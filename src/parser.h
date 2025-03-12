@@ -140,13 +140,13 @@ AST *new_ast(AST ast);
 AST *new_ast_assign(char *name, AST *value);
 AST *new_ast_int64(int64_t number);
 AST *new_ast_float(float number);
-AST *new_ast_add(VarType ret_type, AST *left, AST *right);
-AST *new_ast_sub(VarType ret_type, AST *left, AST *right);
-AST *new_ast_mul(VarType ret_type, AST *left, AST *right);
-AST *new_ast_div(VarType ret_type, AST *left, AST *right);
-AST *new_ast_funct(VarType ret_type, char *name, VarType *param_types, char **params, int param_count, AST_BLOCK *body);
-AST *new_ast_declare(VarType type, char *name, AST *value);
-AST *new_ast_var(VarType type, char *name);
+AST *new_ast_add(AST *left, AST *right);
+AST *new_ast_sub(AST *left, AST *right);
+AST *new_ast_mul(AST *left, AST *right);
+AST *new_ast_div(AST *left, AST *right);
+AST *new_ast_funct(char *name, char **params, int param_count, AST_BLOCK *body);
+AST *new_ast_declare(char *name, AST *value);
+AST *new_ast_var(char *name);
 
 VarType typeOf(AST* ast);  // Returns the data type of something
 AST *generate_tree(TokenList tl, bool parse_functions);

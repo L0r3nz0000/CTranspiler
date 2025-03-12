@@ -54,12 +54,11 @@ AST *new_ast_string(char *string) {
   });
 }
 
-AST *new_ast_add(VarType ret_type, AST *left, AST *right) {
+AST *new_ast_add(AST *left, AST *right) {
   return new_ast((AST) {
     .tag = TAG_ADD,
     .data = {
       .ast_add = {
-        .ret_type = ret_type,
         .left = left,
         .right = right,
       },
@@ -67,12 +66,11 @@ AST *new_ast_add(VarType ret_type, AST *left, AST *right) {
   });
 }
 
-AST *new_ast_sub(VarType ret_type, AST *left, AST *right) {
+AST *new_ast_sub(AST *left, AST *right) {
   return new_ast((AST) {
     .tag = TAG_SUB,
     .data = {
       .ast_sub = {
-        .ret_type = ret_type,
         .left = left,
         .right = right,
       },
@@ -80,12 +78,11 @@ AST *new_ast_sub(VarType ret_type, AST *left, AST *right) {
   });
 }
 
-AST *new_ast_mul(VarType ret_type, AST *left, AST *right) {
+AST *new_ast_mul(AST *left, AST *right) {
   return new_ast((AST) {
     .tag = TAG_MUL,
     .data = {
       .ast_mul = {
-        .ret_type = ret_type,
         .left = left,
         .right = right,
       },
@@ -93,12 +90,11 @@ AST *new_ast_mul(VarType ret_type, AST *left, AST *right) {
   });
 }
 
-AST *new_ast_div(VarType ret_type, AST *left, AST *right) {
+AST *new_ast_div(AST *left, AST *right) {
   return new_ast((AST) {
     .tag = TAG_DIV,
     .data = {
       .ast_div = {
-        .ret_type = ret_type,
         .left = left,
         .right = right,
       },
@@ -106,12 +102,11 @@ AST *new_ast_div(VarType ret_type, AST *left, AST *right) {
   });
 }
 
-AST *new_ast_mod(VarType ret_type, AST *left, AST *right) {
+AST *new_ast_mod(AST *left, AST *right) {
   return new_ast((AST) {
     .tag = TAG_MOD,
     .data = {
       .ast_mod = {
-        .ret_type = ret_type,
         .left = left,
         .right = right,
       },
@@ -119,14 +114,12 @@ AST *new_ast_mod(VarType ret_type, AST *left, AST *right) {
   });
 }
 
-AST *new_ast_funct(VarType ret_type, char *name, VarType *param_types, char **params, int param_count, AST_BLOCK *body) {
+AST *new_ast_funct(char *name, char **params, int param_count, AST_BLOCK *body) {
   return new_ast((AST) {
     .tag = TAG_FUN,
     .data = {
       .ast_funct = {
-        .ret_type = ret_type,
         .name = name,
-        .param_types = param_types,
         .params = params,
         .param_count = param_count,
         .body = body,
@@ -160,12 +153,11 @@ AST *new_ast_return(AST *value) {
 }
 
 
-AST *new_ast_declare(VarType type, char *name, AST *value) {
+AST *new_ast_declare(char *name, AST *value) {
   return new_ast((AST) {
     .tag = TAG_DECLARE,
     .data = {
       .ast_declare = {
-        .type = type,
         .name = name,
         .value = value,
       },
@@ -173,12 +165,11 @@ AST *new_ast_declare(VarType type, char *name, AST *value) {
   });
 }
 
-AST *new_ast_var(VarType type, char *name) {
+AST *new_ast_var(char *name) {
   return new_ast((AST) {
     .tag = TAG_VAR,
     .data = {
       .ast_var = {
-        .type = type,
         .name = name,
       },
     },
@@ -303,6 +294,9 @@ VarType typeOf(AST* ast) {
     case TAG_DECLARE:
       t = ast->data.ast_declare.type;
       break;
+    case TAG_RETURN:
+      t = typeOf(ast->data.ast_return.value);
+      break;
     default:
       printf("Invalid operation (typeof) for tag: %d\n", ast->tag);
       exit(1);
@@ -360,7 +354,7 @@ size_t find_last(TokenList tl, TokenType type) {
 }
 
 TokenList slice(TokenList tl, int start, int elements) {
-  return (TokenList) { .tokens = &tl.tokens[start], .size = elements };
+  return (TokenList) { .tokens = tl.tokens + start, .size = elements };
 }
 
 TokenList slice_from_to(TokenList tl, int start, int end) {
@@ -413,6 +407,7 @@ TokenList extract_block(TokenList tl) {
   TokenList tokens = extract_tokens(tl, TOKEN_LBRACE, TOKEN_RBRACE);
   if (tokens.tokens == NULL) {
     fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
+    print_token_list(tl);
     exit(1);
   }
 }
@@ -449,6 +444,7 @@ int find_block_end(TokenList tl) {
 
   if (brace_count != 0) {
     fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
+    print_token_list(tl);
     exit(1);
   }
 
@@ -476,17 +472,8 @@ AST *function_definition(TokenList tl) {
 
   AST_BLOCK *block = parse_program(body, false);
 
-  VarType r_type = VOID;
-
-  // if (block->statements[block->count-1]->tag == TAG_RETURN) {
-  //   printf("Calculating type for return tag\n");
-  //   r_type = typeOf(block->statements[block->count-1]->data.ast_return.value);
-  // } else if (find(body, TOKEN_RETURN) != -1) {
-  //   printf("WARNING: The return statement shuld be the last operation of the function\n");
-  // }
-
   // Crea il nodo funzione
-  return new_ast_funct(r_type, name, NULL, params, param_count, block);  // ! RIMUOVERE I TIPI DI DATI
+  return new_ast_funct(name, params, param_count, block);
 }
 
 bool ends_with(const char *str, const char *suffix) {
@@ -506,23 +493,6 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
 
   AST *left, *right;  // Dichiarazioni per eventuali operatori binari
   VarType t1, t2;  // Used for type deduction
-
-  // Controlla se è una dichiarazione di funzione
-  if (tl.tokens[0].type == TOKEN_FUN && parse_functions) {
-    return function_definition(tl);
-  }
-
-  /*
-  if (i == 10) {
-    Code
-  }
-  */
-  if (tl.tokens[0].type == TOKEN_IF) {
-    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
-    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
-
-    return new_ast_if(generate_tree(condition, false), parse_program(body, false));
-  }
 
   /*
   while (i < 10) {
@@ -545,21 +515,21 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     TokenList header = extract_parentheses(tl);
     TokenList body = extract_block(tl);
 
-    printf("Header: \n");
-    print_token_list(header);
+    // printf("Header: \n");
+    // print_token_list(header);
 
     TokenList init = slice_from_to(header, 0, find(header, TOKEN_TO));
     TokenList to = slice_from_to(header, find(header, TOKEN_TO) + 1, find(header, TOKEN_STEP));
     TokenList step = slice_from_to(header, find(header, TOKEN_STEP) + 1, header.size);
 
-    printf("Init: \n");
-    print_token_list(init);
-    printf("To: \n");
-    print_token_list(to);
-    printf("Step: \n");
-    print_token_list(step);
-    printf("Body: \n");
-    print_token_list(body);
+    // printf("Init: \n");
+    // print_token_list(init);
+    // printf("To: \n");
+    // print_token_list(to);
+    // printf("Step: \n");
+    // print_token_list(step);
+    // printf("Body: \n");
+    // print_token_list(body);
 
     AST *init_ast = generate_tree(init, false);     // Declare or assign
     AST *to_value_ast = generate_tree(to, false);   // End value (int or float)
@@ -568,24 +538,25 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
 
     AST *start_value_ast = NULL;
 
-    if (to_value_ast->tag != TAG_INT && to_value_ast->tag != TAG_FLOAT) {
-      printf("Errore: valore di end non valido\n");
-      exit(1);
-    } else if (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN) {
+    // if (to_value_ast->tag != TAG_INT && to_value_ast->tag != TAG_FLOAT) {
+    //   printf("Errore: valore di end non valido\n");
+    //   exit(1);
+    // } else if (step_ast->tag != TAG_INT && step_ast->tag != TAG_FLOAT) {
+    //   printf("Errore: valore di step non valido\n");
+    //   exit(1);
+    // }
+    if (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN) {
       printf("Errore: inizializzazione del ciclo for non valida\n");
-      exit(1);
-    } else if (step_ast->tag != TAG_INT && step_ast->tag != TAG_FLOAT) {
-      printf("Errore: valore di step non valido\n");
       exit(1);
     }
 
     if (init_ast->tag == TAG_DECLARE) {
       VarType type = init_ast->data.ast_declare.type;
       char *name = init_ast->data.ast_declare.name;
-      start_value_ast = new_ast_var(type, name);
+      start_value_ast = new_ast_var(name);
     } else if (init_ast->tag == TAG_ASSIGN) {
       char *name = init_ast->data.ast_assign.name;
-      start_value_ast = new_ast_var(typeOf(init_ast->data.ast_assign.value), name);
+      start_value_ast = new_ast_var(name);
     } else {
       printf("Errore: inizializzazione del ciclo for non valida\n");
       exit(1);
@@ -609,6 +580,59 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     return new_ast_for(init_ast, condition_ast, step_ast, parse_program(body, false));
   }
 
+  /*
+  if (i == 10) {
+    Code
+  }
+  */
+  if (tl.tokens[0].type == TOKEN_IF) {
+    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
+    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
+
+    return new_ast_if(generate_tree(condition, false), parse_program(body, false));
+  }
+
+  /* <- value; */
+  if (tl.tokens[0].type == TOKEN_RETURN) {
+    // Considera i token successivi come espressione di ritorno
+    TokenList return_expr = { .tokens = tl.tokens + 1, .size = tl.size - 1 };
+    AST *value = generate_tree(return_expr, false);  // Genera l'espressione che viene restituita
+    return new_ast_return(value);  // Crea il nodo return
+  }
+
+  // Gestisce le chiamate a funzione
+  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_LPAREN) {
+    char *name = tl.tokens[0].value.value.sval;
+    int arg_count = 0;
+    AST **args = malloc(sizeof(AST *) * 20);
+
+    TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
+    printf("args:\n");
+    print_token_list(args_tl);
+
+
+    // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
+    int paren_depth = 0;
+    for (int j = 0; j < args_tl.size; j++) {
+      if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
+      if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
+
+      if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
+        // printf("Argomento: \n");
+        // print_token_list(slice(args_tl, 0, j));
+        args[arg_count++] = generate_tree(slice(args_tl, 0, j), false);
+        args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
+        j = 0;
+      }
+    }
+
+    // Aggiunge l'ultimo argomento
+    if (args_tl.size > 0) {
+      args[arg_count++] = generate_tree(args_tl, false);
+    }
+    return new_ast_call(name, args, arg_count);
+  }
+
   for (int i = 0; i < tl.size; i++) {  
     Token *token = &tl.tokens[i];
 
@@ -616,7 +640,7 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
       TokenList sublist = { .tokens = &tl.tokens[i + 1], .size = tl.size - (i + 1) };
       if (tl.tokens[i-2].type == TOKEN_DECLARE) {
         AST *value = generate_tree(sublist, false);
-        return new_ast_declare(typeOf(value), tl.tokens[i-1].value.value.sval, value);
+        return new_ast_declare(tl.tokens[i-1].value.value.sval, value);
       } else {
         return new_ast_assign(tl.tokens[i-1].value.value.sval, generate_tree(sublist, false));
       }
@@ -637,45 +661,27 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
     }
   }
 
-  VarType exp_return_type;
   for (int i = 0; i < tl.size; i++) {  // Operatori {+, -}
     Token *token = &tl.tokens[i];
 
     switch (token->type) {
       case TOKEN_SUM:
+        printf("somma\n");
+        printf("\toperatore1:\n");
+        print_token_list((TokenList) {tl.tokens, i});
+        printf("\toperatore2:\n");
+        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
+
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        t1 = typeOf(left);
-        t2 = typeOf(right);
-
-        if (t1 == INT && t2 == INT) {
-          exp_return_type = INT;
-        } else if (t1 == STRING && t2 == STRING) {
-          exp_return_type = STRING;
-        } else if (t1 == FLOAT && t2 == INT || t1 == INT && t2 == FLOAT || t1 == FLOAT && t2 == FLOAT) {
-          exp_return_type = FLOAT;
-        } else {
-          printf("Errore: tipi non compatibili per l'operatore + \n");
-          exit(1);
-        }
-
-        return new_ast_add(exp_return_type, left, right);
+        
+        return new_ast_add(left, right);
       break;
       case TOKEN_SUB:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        t1 = typeOf(left);
-        t2 = typeOf(right);
 
-        if (t1 == INT && t2 == INT) {
-          exp_return_type = INT;
-        } else if (t1 == FLOAT && t2 == INT || t1 == INT && t2 == FLOAT || t1 == FLOAT && t2 == FLOAT) {
-          exp_return_type = FLOAT;
-        } else {
-          printf("Errore: tipi non compatibili per l'operatore -\n");
-          exit(1);
-        }
-        return new_ast_sub(exp_return_type, left, right);
+        return new_ast_sub(left, right);
       break;
     }
   }
@@ -687,89 +693,21 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
       case TOKEN_MUL:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        t1 = typeOf(left);
-        t2 = typeOf(right);
-
-        if (t1 == INT && t2 == INT) {
-          exp_return_type = INT;
-        } else if (t1 == FLOAT && t2 == INT || t1 == INT && t2 == FLOAT || t1 == FLOAT && t2 == FLOAT) {
-          exp_return_type = FLOAT;
-        } else if (t1 == STRING && t2 == INT || t1 == INT && t2 == STRING) {
-          exp_return_type = STRING;
-        } else {
-          printf("Errore: tipi non compatibili per l'operatore *\n");
-          exit(1);
-        }
-        return new_ast_mul(exp_return_type, left, right);
+        
+        return new_ast_mul(left, right);
       break;
       case TOKEN_DIV:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        t1 = typeOf(left);
-        t2 = typeOf(right);
-
-        if (t1 == INT && t2 == INT) {
-          exp_return_type = INT;
-        } else if (t1 == FLOAT && t2 == INT || t1 == INT && t2 == FLOAT || t1 == FLOAT && t2 == FLOAT) {
-          exp_return_type = FLOAT;
-        } else {
-          printf("Errore: tipi non compatibili per l'operatore /\n");
-          exit(1);
-        }
-        return new_ast_div(exp_return_type, left, right);
+        
+        return new_ast_div(left, right);
       case TOKEN_PERCENT:
         left = generate_tree((TokenList) {tl.tokens, i}, false); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}, false); // Token dopo l'operatore
-        t1 = typeOf(left);
-        t2 = typeOf(right);
-
-        if (t1 == INT && t2 == INT) {
-          exp_return_type = INT;
-        } else {
-          printf("Errore: tipi non compatibili per l'operatore %%\n");
-          exit(1);
-        }
-        return new_ast_mod(exp_return_type, left, right);
+        
+        return new_ast_mod(left, right);
       break;
     }
-  }
-
-  // Gestisce le chiamate a funzione
-  for (int i = 0; i < tl.size; i++) {
-    if (tl.tokens[i].type == TOKEN_IDENTIFIER && tl.tokens[i + 1].type == TOKEN_LPAREN) {
-      char *name = tl.tokens[i].value.value.sval;
-      int arg_count = 0;
-      AST **args = malloc(sizeof(AST *) * 20);
-
-      TokenList args_tl = extract_parentheses(slice(tl, i + 1, tl.size - (i + 1)));
-      
-      // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
-
-      int paren_depth = 0;
-      for (int j = 0; j < args_tl.size; j++) {
-        if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
-        if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
-
-        if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
-          args[arg_count++] = generate_tree(slice(args_tl, 0, j), false);
-          args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
-          j = 0;
-        }
-      }
-
-      // Aggiunge l'ultimo argomento
-      if (args_tl.size > 0) {
-        args[arg_count++] = generate_tree(args_tl, false);
-      }
-      return new_ast_call(name, args, arg_count);
-    }
-  }
-
-  if (tl.tokens[0].type == TOKEN_RETURN) {
-    // Considera i token successivi come espressione di ritorno
-    TokenList return_expr = { .tokens = tl.tokens + 1, .size = tl.size - 1 };
-    AST *value = generate_tree(return_expr, false);  // Genera l'espressione che viene restituita
-    return new_ast_return(value);  // Crea il nodo return
   }
 
   if (tl.tokens[0].type == TOKEN_FLOAT) {
@@ -781,7 +719,7 @@ AST *generate_tree(TokenList tl, bool parse_functions) {
   }
 
   if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
-    return new_ast_var(INT, tl.tokens[0].value.value.sval);  // ! Usare una tabella dei tipi per determinare il tipo della variabile
+    return new_ast_var(tl.tokens[0].value.value.sval);
   }
 
   if (tl.tokens[0].type == TOKEN_STRING) {
@@ -836,15 +774,17 @@ AST_BLOCK *define_all_functions(TokenList tl) {
     fun_index = find(tl, TOKEN_FUN);    // Inizio della definizione di funzione
     if (fun_index == -1) break;
 
-    block_end = find_block_end(slice(tl, fun_index, tl.size - fun_index));  // Cerca la } di chiusura
+    TokenList sublist = slice(tl, fun_index, tl.size - fun_index);  // Taglia da fun alla fine
+    block_end = find_block_end(sublist);  // Cerca la } di chiusura
 
     if (block_end == -1) {
       fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
       exit(1);
     }
-
-    TokenList sublist = slice(tl, fun_index, block_end - fun_index + 1);
-    AST *function = generate_tree(sublist, true);
+    
+    sublist = slice_from_to(sublist, 0, block_end + 1);
+    
+    AST *function = function_definition(sublist);
 
     // Aggiunge la funzione al blocco funzioni
     add_ast_to_block(functions, function);
@@ -929,8 +869,21 @@ void *parse_program(TokenList tl, bool parse_functions) {
       if (tl.tokens[i].type == TOKEN_IF || tl.tokens[i].type == TOKEN_WHILE || tl.tokens[i].type == TOKEN_FOR) {
         int end = find_block_end(slice(tl, i, tl.size - i));
         if (end == -1) {
-          fprintf(stderr, "Errore: blocco if mai aperto\n");
-          exit(1);
+          switch (tl.tokens[i].type) {
+            case TOKEN_IF:
+              fprintf(stderr, "Errore: blocco if mai aperto\n");
+              exit(1);
+              break;
+            case TOKEN_WHILE:
+              fprintf(stderr, "Errore: blocco while mai aperto\n");
+              exit(1);
+              break;
+            case TOKEN_FOR:
+              fprintf(stderr, "Errore: blocco for mai aperto\n");
+              exit(1);
+              break;
+          }
+          
         }
         end += i;
         TokenList sublist = slice(tl, i, end - i + 1);
