@@ -76,6 +76,7 @@
     "typeinfo": "c",
     "stdint.h": "c",
     "preprocessor.h": "c",
-    "stdbool.h": "c"
+    "stdbool.h": "c",
+    "classes.h": "c"
   }
 }

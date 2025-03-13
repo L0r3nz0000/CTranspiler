@@ -40,16 +40,80 @@ typedef struct {
   } value;
 } Value;
 
-// Ogni Classe deve ereditare da questa struttura e implementare i metodi
-typedef struct Object {
+#define NONE ((Value){NONE_TYPE, {0}})
+
+// * INIZIO GESTIONE CLASSI
+struct Object {
   char *class_name;
-  void (*__free__)(void *self);
-  Value (*__to_string__)(void *self);
-} Object;
+  Value (*__free__)(Object *self);
+  Value (*__to_string__)(Object *self);
+};
+
+typedef struct {
+  char *method_name;
+  Value (*method)(Object *, Value);
+} MethodEntry;
+
+typedef struct {
+  void *obj;
+  MethodEntry *methods;
+  int method_count;
+} VMTEntry;
+
+#define MAX_OBJECTS 100
+
+VMTEntry vmt_table[MAX_OBJECTS];
+int vmt_count = 0;
+
+void register_methods(void *obj, MethodEntry *methods, int method_count) {
+  if (vmt_count < MAX_OBJECTS) {
+    if (!obj || !methods || method_count <= 0) {
+      fprintf(stderr, "Error: Cannot register methods, invalid data\n");
+      return;
+    }
+
+    // Allocazione sicura della tabella dei metodi
+    MethodEntry *copy = malloc(sizeof(MethodEntry) * method_count);
+    if (!copy) {
+      perror("Error allocating method table");
+      exit(1);
+    }
+
+    for (int i = 0; i < method_count; i++) {
+      copy[i].method = methods[i].method;
+      copy[i].method_name = strdup(methods[i].method_name);  // Copia sicura della stringa
+      if (!copy[i].method_name) {
+        perror("Error allocating method name");
+        exit(1);
+      }
+    }
+
+    vmt_table[vmt_count].obj = obj;
+    vmt_table[vmt_count].methods = copy;
+    vmt_table[vmt_count].method_count = method_count;
+    vmt_count++;
+  }
+}
+
+
+Value call_method(void *obj, const char *method_name, Value arg) {
+  for (int i = 0; i < vmt_count; i++) {
+    if (vmt_table[i].obj == obj) {
+      for (int j = 0; j < vmt_table[i].method_count; j++) {
+        if (strcmp(vmt_table[i].methods[j].method_name, method_name) == 0) {
+          return vmt_table[i].methods[j].method(obj, arg);
+        }
+      }
+      printf("Error: Method %s() not implemented for this object\n", method_name);
+      return NONE;
+    }
+  }
+  printf("Error: Object not found in VMT\n");
+}
+
+// * FINE GESTIONE CLASSI
 
 void print(Value data);
-
-#define NONE ((Value){NONE_TYPE, {0}})
 
 Value type(Value v) {
   return (Value) {TYPE, .value.typeval = v.tag};
@@ -569,17 +633,14 @@ Value readln() {
 
 // End mysdtlib
 #endif
-#include <unistd.h>
-int main() {
-println(((Value) {STRING, .value.sval = {"ciao", 4}}));
-print(((Value) {STRING, .value.sval = {"Inserisci un numero: ", 21}}));
-Value num = Int(readln());
-Value i = ((Value) {INT, .value.ival = 0});
-while (c_bool(is_less(i, add_operator(mul_operator(num, ((Value) {INT, .value.ival = 2})), ((Value) {INT, .value.ival = 1}))))) {
-Value spaces = sub_operator(num, Int(div_operator(i, ((Value) {INT, .value.ival = 2}))));
-print(mul_operator(((Value) {STRING, .value.sval = {" ", 1}}), spaces));
-println(mul_operator(((Value) {STRING, .value.sval = {"*", 1}}), i));
-i = add_operator(i, ((Value) {INT, .value.ival = 2}));
+Value __init__(Value a, Value b) {
+a = a;
+b = b;
 }
+Value somma() {
+add_operator(return, this)}
+int main() {
+Value var = NONE;
+println(((Value) {FLOAT, .value.fval = 3.140000}));
 return c_int(((Value) {INT, .value.ival = 0}));
 }

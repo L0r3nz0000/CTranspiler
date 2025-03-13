@@ -238,6 +238,35 @@ AST *new_ast_condition(AST *left, AST *right, TokenType type) {
   });
 }
 
+AST *new_ast_class(char *name, char **fields, int field_count, AST_METHOD **methods, int method_count) {
+  return new_ast((AST) {
+    .tag = TAG_CLASS,
+    .data = {
+      .ast_class = {
+        .name = name,
+        .fields = fields,
+        .field_count = field_count,
+        .methods = methods,
+        .method_count = method_count,
+      },
+    },
+  });
+}
+
+AST *new_ast_method(char *name, char **params, int param_count, AST_BLOCK *body) {
+  return new_ast((AST) {
+    .tag = TAG_METHOD,
+    .data = {
+      .ast_method = {
+        .name = name,
+        .params = params,
+        .param_count = param_count,
+        .body = body,
+      },
+    },
+  });
+}
+
 VarType typeOf(AST* ast) {
   VarType t = VOID;
   VarType t1, t2;

@@ -38,6 +38,8 @@ typedef enum {
   TOKEN_TO,      // to
   TOKEN_STEP,    // step
 
+  TOKEN_CLASS,   // class
+
   TOKEN_EQUALS,           // ==
   TOKEN_NOT_EQUALS,       // !=
   TOKEN_LESS_EQUALS,      // <=
@@ -70,6 +72,7 @@ typedef enum {
 
   TOKEN_EOL,         // ;
   TOKEN_COMMA,       // ,
+  TOKEN_DOT,         // .
 } TokenType;
 
 #define NONE_VAL (Value) {0, 1}

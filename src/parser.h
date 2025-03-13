@@ -66,13 +66,22 @@ typedef BINARY_OP AST_DIV;
 typedef BINARY_OP AST_MOD;
 
 typedef struct {
-  VarType ret_type;       // Return type
   char *name;             // Function name
-  VarType *param_types;   // Parameter types
   char **params;          // Parameter list
   int param_count;        // Number of parameters
   AST_BLOCK *body;        // Body (array of instructions)
 } AST_FUNCT;
+
+typedef AST_FUNCT AST_METHOD;
+
+typedef struct { 
+  char *name; 
+  char **fields;
+  int field_count; 
+
+  AST_METHOD* methods;
+  int method_count;
+} AST_CLASS;
 
 typedef struct { AST *value; } AST_RETURN;
 typedef struct { VarType type; char *name; AST *value; } AST_DECLARE;
@@ -106,6 +115,8 @@ typedef enum {
   TAG_WHILE,
   TAG_FOR,
   TAG_CONDITION,
+  TAG_CLASS,
+  TAG_METHOD,
 } AST_TAG;
 
 typedef struct AST {
@@ -126,6 +137,8 @@ typedef struct AST {
     AST_CONDITION ast_condition;
     AST_WHILE ast_while;
     AST_FOR ast_for;
+    AST_CLASS ast_class;
+    AST_METHOD ast_method;
 
     // Operatori binari
     AST_ADD ast_add;

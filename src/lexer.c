@@ -12,6 +12,7 @@ const char* TOKEN_PATTERNS[] = {
   "\\bfor\\b",     // TOKEN_FOR
   "\\bto\\b",      // TOKEN_TO
   "\\bstep\\b",    // TOKEN_STEP
+  "\\bclass\\b",   // TOKEN_CLASS
 
   "==",            // TOKEN_EQUALS
   "!=",            // TOKEN_NOT_EQUALS
@@ -41,6 +42,7 @@ const char* TOKEN_PATTERNS[] = {
   "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b", // TOKEN_IDENTIFIER
   ";",            // TOKEN_EOL
   ",",            // TOKEN_COMMA
+  "\\.",            // TOKEN_DOT
 };
 
 
@@ -54,6 +56,8 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_FOR",
   "TOKEN_TO",
   "TOKEN_STEP",
+
+  "TOKEN_CLASS",
 
   "TOKEN_EQUALS",
   "TOKEN_NOT_EQUALS",
@@ -80,6 +84,7 @@ const char *TOKEN_NAMES[] = {
   "TOKEN_IDENTIFIER",
   "TOKEN_EOL",
   "TOKEN_COMMA",
+  "TOKEN_DOT",
 };
 
 Token *new_token(TokenType type, Value value) {

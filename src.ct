@@ -1,13 +1,20 @@
-import "unistd.h";
+class Somma {
+  @ a = NONE;
+  @ b = NONE;
+
+  fun __init__(a, b) => {
+    this.a = a;
+    this.b = b;
+  }
+
+  fun somma() => {
+    return this.a + this.b;
+  }
+}
+
 
 fun main() => {
-  print("Inserisci un numero: ");
-  @ num = Int(readln());
-
-  for (@ i = 0 to num * 2 + 1 step 2) {
-    @ spaces = num - Int(i/2);
-    print(" " * spaces);
-    println("*" * i);
-  }
+  @ var = NONE;
+  println(3.14);
   <- 0;
 } 
