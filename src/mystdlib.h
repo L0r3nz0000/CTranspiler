@@ -40,13 +40,6 @@ typedef struct {
   } value;
 } Value;
 
-// Ogni Classe deve ereditare da questa struttura e implementare i metodi
-typedef struct Object {
-  char *class_name;
-  void (*__free__)(void *self);
-  Value (*__to_string__)(void *self);
-} Object;
-
 void print(Value data);
 
 #define NONE ((Value){NONE_TYPE, {0}})
