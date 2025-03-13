@@ -15,7 +15,7 @@
 typedef struct {
   union {
     char cval;    // char
-    long i64val;  // int 64
+    long ival;  // int 64
     int i32val;   // int 32
     short i16val; // int 16
     float fval;   // float

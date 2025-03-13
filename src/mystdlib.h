@@ -6,13 +6,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <float.h>
+
+typedef struct Object Object;
 
 typedef enum {
+  NONE_TYPE,
   CHAR,
   INT,
   FLOAT,
   STRING,
   BOOL,
+  TYPE,
+  OBJECT,
 } DataType;
 
 typedef struct {
@@ -23,40 +29,36 @@ typedef struct {
 typedef struct {
   DataType tag;
   union {
-    char cval;  
-    long i64val;
-    int i32val; 
-    short i16val;
-    float fval;
-    double dval;
+    char cval;
+    long ival;
+    double fval;
     string sval;
-    bool bval;  
+    bool bval;
+    DataType typeval;
+
+    Object *obj_ptr;
   } value;
-  int is_none;
 } Value;
+
+// Ogni Classe deve ereditare da questa struttura e implementare i metodi
+typedef struct Object {
+  char *class_name;
+  void (*__free__)(void *self);
+  Value (*__to_string__)(void *self);
+} Object;
 
 void print(Value data);
 
-#define NONE (Value) {0, {0}, 1}
-
-char *typeOf(Value v) {
-  switch (v.tag) {
-    case CHAR: return "char";
-    case INT: return "int";
-    case FLOAT: return "float";
-    case STRING: return "string";
-    case BOOL: return "bool";
-    default: return "unknown";
-  }
-}
+#define NONE ((Value){NONE_TYPE, {0}})
 
 Value type(Value v) {
-  return (Value) {STRING, .value.sval = {typeOf(v), strlen(typeOf(v))}, 0};
+  return (Value) {TYPE, .value.typeval = v.tag};
 }
 
 Value concat_strings(Value string1, Value string2) {
   if (string1.tag != STRING || string2.tag != STRING) {
-    printf("Error: Invalid data types for concatenation. Cannot concatenate '%s' and '%s'.\n", typeOf(string1), typeOf(string2));
+    printf("Error: Invalid data types for concatenation. Cannot concatenate '");
+    print(type(string1)); printf("' and '"); print(type(string2)); printf("'.\n");
     exit(1);
   }
 
@@ -66,80 +68,101 @@ Value concat_strings(Value string1, Value string2) {
   strncpy(str + string1.value.sval.size, string2.value.sval.str, string2.value.sval.size);
   str[size] = '\0';
 
-  return (Value) {STRING, .value.sval = {str, size}, 0};
+  return (Value) {STRING, .value.sval = {str, size}};
+}
+
+void trim_float(char *buffer, double fval) {
+  snprintf(buffer, sizeof(buffer), "%.*g", DBL_DIG, fval);
+
+  int len = strlen(buffer);
+  
+  // Se c'è un punto decimale toglie gli zeri
+  if (strchr(buffer, '.')) {
+    while (len > 0 && buffer[len - 1] == '0') {
+      buffer[len - 1] = '\0';
+      len--;
+    }
+    // Se rimane solo il punto lo elimina
+    if (len > 0 && buffer[len - 1] == '.') {
+      buffer[len - 1] = '\0';
+    }
+  }
 }
 
 Value add_operator(Value a, Value b) {  // Operatore +
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.i64val = a.value.i64val + b.value.i64val, 0};
+    return (Value) {INT, .value.ival = a.value.ival + b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.dval = a.value.dval + b.value.dval, 0};
+    return (Value) {FLOAT, .value.fval = a.value.fval + b.value.fval};
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.i64val = a.value.i64val + b.value.dval, 0};
+    return (Value) {FLOAT, .value.ival = a.value.ival + b.value.fval};
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.i64val = a.value.dval + b.value.i64val, 0};
+    return (Value) {FLOAT, .value.ival = a.value.fval + b.value.ival};
   } else if (a.tag == STRING && b.tag == STRING) {
     return concat_strings(a, b);
   } else {
-    printf("Error: Invalid data types for '+' operator. Cannot add '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '+' operator. Cannot add '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value sub_operator(Value a, Value b) {  // Operatore -
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.i64val = a.value.i64val - b.value.i64val, 0};
+    return (Value) {INT, .value.ival = a.value.ival - b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.dval = a.value.dval - b.value.dval, 0};
+    return (Value) {FLOAT, .value.fval = a.value.fval - b.value.fval};
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.i64val = a.value.i64val - b.value.dval, 0};
+    return (Value) {FLOAT, .value.ival = a.value.ival - b.value.fval};
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.i64val = a.value.dval - b.value.i64val, 0};
+    return (Value) {FLOAT, .value.ival = a.value.fval - b.value.ival};
   } else {
-    printf("Error: Invalid data types for '-' operator. Cannot subtract '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '-' operator. Cannot subtract '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value mul_operator(Value a, Value b) {  // Operatore *
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.i64val = a.value.i64val * b.value.i64val, 0};
+    return (Value) {INT, .value.ival = a.value.ival * b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.dval = a.value.dval * b.value.dval, 0};
+    return (Value) {FLOAT, .value.fval = a.value.fval * b.value.fval};
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.i64val = a.value.i64val * b.value.dval, 0};
+    return (Value) {FLOAT, .value.ival = a.value.ival * b.value.fval};
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.i64val = a.value.dval * b.value.i64val, 0};
+    return (Value) {FLOAT, .value.ival = a.value.fval * b.value.ival};
   } else if (a.tag == STRING && b.tag == INT) {
-    if (b.value.i64val < 0) {
+    if (b.value.ival < 0) {
       printf("Error: Cannot multiply string by negative number.\n");
       exit(1);
     }
-    Value result = {STRING, .value.sval = {"", 0}, 0};
+    Value result = {STRING, .value.sval = {"", 0}};
 
-    for (int i = 0; i < b.value.i64val; i++) {
+    for (int i = 0; i < b.value.ival; i++) {
       result = concat_strings(result, a);
     }
     return result;
   } else if (a.tag == INT && b.tag == STRING) {
-    if (a.value.i64val < 0) {
+    if (a.value.ival < 0) {
       printf("Error: Cannot multiply string by negative number.\n");
       exit(1);
     }
-    Value result = {STRING, .value.sval = {"", 0}, 0};
+    Value result = {STRING, .value.sval = {"", 0}};
 
-    for (int i = 0; i < a.value.i64val; i++) {
+    for (int i = 0; i < a.value.ival; i++) {
       result = concat_strings(result, b);
     }
     return result;
   } else {
-    printf("Error: Invalid data types for '*' operator. Cannot multiply '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '*' operator. Cannot multiply '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value div_operator(Value a, Value b) {  // Operatore /
-  if ((b.tag == INT && b.value.i64val == 0) || (b.tag == FLOAT && b.value.dval == 0)) {
+  if ((b.tag == INT && b.value.ival == 0) || (b.tag == FLOAT && b.value.fval == 0)) {
     printf("Error: Zero division error (in module operation) Cannot divide '");
     print(a);
     printf("' by zero.\n");
@@ -148,21 +171,22 @@ Value div_operator(Value a, Value b) {  // Operatore /
 
 
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.i64val = a.value.i64val / b.value.i64val, 0};
+    return (Value) {INT, .value.ival = a.value.ival / b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.dval = a.value.dval / b.value.dval, 0};
+    return (Value) {FLOAT, .value.fval = a.value.fval / b.value.fval};
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.i64val = a.value.i64val / b.value.dval, 0};
+    return (Value) {FLOAT, .value.ival = a.value.ival / b.value.fval};
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.i64val = a.value.dval / b.value.i64val, 0};
+    return (Value) {FLOAT, .value.ival = a.value.fval / b.value.ival};
   } else {
-    printf("Error: Invalid data types for '/' operator. Cannot divide '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '/' operator. Cannot divide '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value mod_operator(Value a, Value b) { // Operatore %
-  if (b.tag == INT && b.value.i64val == 0) {
+  if (b.tag == INT && b.value.ival == 0) {
     printf("Error: Zero division error (in module operation) Cannot divide '");
     print(a);
     printf("' by zero.\n");
@@ -170,166 +194,175 @@ Value mod_operator(Value a, Value b) { // Operatore %
   }
 
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.i64val = a.value.i64val % b.value.i64val, 0};
+    return (Value) {INT, .value.ival = a.value.ival % b.value.ival};
   } else {
-    printf("Error: Invalid data types for '%' operator. Cannot divide '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '%%' operator. Cannot divide '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val == b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival == b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval == b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval == b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval == b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval == b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val == b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival == b.value.fval};
   } else if (a.tag == STRING && b.tag == STRING) {
-    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) == 0, 0};
+    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) == 0};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval == b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval == b.value.cval};
   } else {
-    printf("Error: Invalid data types for '==' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '==' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_not_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val != b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival != b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval != b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval != b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval != b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval != b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val != b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival != b.value.fval};
   } else if (a.tag == STRING && b.tag == STRING) {
-    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) != 0, 0};
+    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) != 0};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval != b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval != b.value.cval};
   } else {
-    printf("Error: Invalid data types for '!=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '!=' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_less(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val < b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival < b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval < b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval < b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval < b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval < b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val < b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival < b.value.fval};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval < b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval < b.value.cval};
   } else {
-    printf("Error: Invalid data types for '<' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '<' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_greater(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val > b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival > b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval > b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval > b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval > b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval > b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val > b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival > b.value.fval};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval > b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval > b.value.cval};
   } else {
-    printf("Error: Invalid data types for '>' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '>' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_less_or_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val <= b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival <= b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval <= b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval <= b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval <= b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval <= b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val <= b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival <= b.value.fval};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval <= b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval <= b.value.cval};
   } else {
-    printf("Error: Invalid data types for '<=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '<=' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
 Value is_greater_or_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val >= b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival >= b.value.ival};
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.dval >= b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval >= b.value.fval};
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.dval >= b.value.i64val, 0};
+    return (Value) {BOOL, .value.bval = a.value.fval >= b.value.ival};
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.i64val >= b.value.dval, 0};
+    return (Value) {BOOL, .value.bval = a.value.ival >= b.value.fval};
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval >= b.value.cval, 0};
+    return (Value) {BOOL, .value.bval = a.value.cval >= b.value.cval};
   } else {
-    printf("Error: Invalid data types for '>=' operator. Cannot compare '%s' and '%s'.\n", typeOf(a), typeOf(b));
+    printf("Error: Invalid data types for '>=' operator. Cannot compare '");
+    print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
     exit(1);
   }
 }
 
-Value toBool(Value v) {
+Value Bool(Value v) {
   if (v.tag == BOOL) {
     return v;
   } else if (v.tag == INT) {
-    return (Value) {BOOL, .value.bval = v.value.i64val != 0, 0};
+    return (Value) {BOOL, .value.bval = v.value.ival != 0};
   } else if (v.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = v.value.dval != 0, 0};
+    return (Value) {BOOL, .value.bval = v.value.fval != 0};
   } else if (v.tag == STRING) {
-    return (Value) {BOOL, .value.bval = v.value.sval.size > 0, 0};
+    return (Value) {BOOL, .value.bval = v.value.sval.size > 0};
   } else if (v.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = v.value.cval != '\0', 0};
+    return (Value) {BOOL, .value.bval = v.value.cval != '\0'};
   } else {
-    printf("Error: Cannot convert '%s' to bool.\n", typeOf(v));
+    printf("Error: Cannot convert '");
+    print(type(v)); printf(" to bool.\n");
     exit(1);
   }
 }
 
-Value toFloat(Value v) {
+Value Float(Value v) {
   if (v.tag == FLOAT) {
     return v;
   } else if (v.tag == INT) {
-    return (Value) {FLOAT, .value.dval = (float)v.value.i64val, 0};
+    return (Value) {FLOAT, .value.fval = (float)v.value.ival};
   } else if (v.tag == STRING) {
     float num = atof(v.value.sval.str);
     if (num == 0) {
       printf("Error: Cannot convert '%s' to float.\n", v.value.sval.str);
       exit(1);
     }
-    return (Value) {FLOAT, .value.dval = num, 0};
+    return (Value) {FLOAT, .value.fval = num};
   } else if (v.tag == CHAR) {
     if (v.value.cval >= '0' && v.value.cval <= '9') {
-      return (Value) {FLOAT, .value.dval = v.value.cval - '0', 0};
+      return (Value) {FLOAT, .value.fval = v.value.cval - '0'};
     } else {
       printf("Error: Cannot convert '%c' to float.\n", v.value.cval);
       exit(1);
     }
   } else {
-    printf("Error: Cannot convert '%s' to float.\n", typeOf(v));
+    printf("Error: Cannot convert '");
+    print(type(v)); printf(" to float.\n");
     exit(1);
   }
 }
 
-Value toInt(Value v) {
+Value Int(Value v) {
   if (v.tag == INT) {
     return v;
   } else if (v.tag == FLOAT) {
-    return (Value) {INT, .value.i64val = (int)v.value.dval, 0};
+    return (Value) {INT, .value.ival = (int)v.value.fval};
   } else if (v.tag == STRING) {
     long num = atoi(v.value.sval.str);
     if (num == 0) {
@@ -340,103 +373,108 @@ Value toInt(Value v) {
       }
       num = (int) fnum;
     }
-    return (Value) {INT, .value.i64val = num, 0};
+    return (Value) {INT, .value.ival = num};
   } else if (v.tag == CHAR) {
     if (v.value.cval >= '0' && v.value.cval <= '9') {
-      return (Value) {INT, .value.i64val = v.value.cval - '0', 0};
+      return (Value) {INT, .value.ival = v.value.cval - '0'};
     } else {
       printf("Error: Cannot convert '%c' to int.\n", v.value.cval);
       exit(1);
     }
   } else {
-    printf("Error: Cannot convert '%s' to int.\n", typeOf(v));
+    printf("Error: Cannot convert '");
+    print(type(v)); printf(" to int.\n");
     exit(1);
   }
 }
 
-Value toChar(Value v) {
+Value Char(Value v) {
   if (v.tag == CHAR) {
     return v;
   } else if (v.tag == INT) {
-    return (Value) {CHAR, .value.cval = v.value.i64val, 0};
+    return (Value) {CHAR, .value.cval = v.value.ival};
   } else if (v.tag == FLOAT) {
-    return (Value) {CHAR, .value.cval = (char)v.value.dval, 0};
+    return (Value) {CHAR, .value.cval = (char)v.value.fval};
   } else if (v.tag == STRING) {
     if (strlen(v.value.sval.str) == 1) {
-      return (Value) {CHAR, .value.cval = v.value.sval.str[0], 0};
+      return (Value) {CHAR, .value.cval = v.value.sval.str[0]};
     } else {
       printf("Error: Cannot convert '%s' to char.\n", v.value.sval.str);
       exit(1);
     }
   } else {
-    printf("Error: Cannot convert '%s' to char.\n", typeOf(v));
+    printf("Error: Cannot convert '");
+    print(type(v)); printf(" to char.\n");
     exit(1);
   }
 }
 
-Value toString(Value v) {
+Value String(Value v) {
   if (v.tag == STRING) {
     return v;
   } else if (v.tag == INT) {
     char *str = (char *) malloc(20);
-    sprintf(str, "%ld", v.value.i64val);
-    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+    sprintf(str, "%ld", v.value.ival);
+    return (Value) {STRING, .value.sval = {str, strlen(str)}};
   } else if (v.tag == FLOAT) {
     char *str = (char *) malloc(20);
-    sprintf(str, "%f", v.value.dval);
-    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+    trim_float(str, v.value.fval);
+    return (Value) {STRING, .value.sval = {str, strlen(str)}};
   } else if (v.tag == CHAR) {
     char *str = (char *) malloc(2);
     str[0] = v.value.cval;
     str[1] = '\0';
-    return (Value) {STRING, .value.sval = {str, strlen(str)}, 0};
+    return (Value) {STRING, .value.sval = {str, strlen(str)}};
+  } else if (v.tag == OBJECT && v.value.obj_ptr && v.value.obj_ptr->__to_string__) {
+    return v.value.obj_ptr->__to_string__(v.value.obj_ptr);
   } else {
-    printf("Error: Cannot convert '%s' to string.\n", typeOf(v));
+    printf("Error: Cannot convert '");
+    print(type(v)); printf(" to string.\n");
     exit(1);
   }
 }
 
 /* STD type conversions */
-bool c_bool(Value v)              { return toBool(v).value.bval; }
-char c_char(Value v)              { return toChar(v).value.cval; }
+bool c_bool(Value v)              { return Bool(v).value.bval; }
+char c_char(Value v)              { return Char(v).value.cval; }
 wchar_t c_wchar(Value v); //! Not supported yet
-char c_byte(Value v)              { return toChar(v).value.cval; }
-unsigned char c_ubyte(Value v)    { return (unsigned char) toChar(v).value.cval; }
-short c_short(Value v)            { return toInt(v).value.i16val; }
-unsigned short c_ushort(Value v)  { return (unsigned short) toInt(v).value.i16val; }
-int c_int(Value v)                { return toInt(v).value.i64val; }
+char c_byte(Value v)              { return Char(v).value.cval; }
+unsigned char c_ubyte(Value v)    { return (unsigned char) Char(v).value.cval; }
+short c_short(Value v)            { return (short) Int(v).value.ival; }
+unsigned short c_ushort(Value v)  { return (unsigned short) Int(v).value.ival; }
+int c_int(Value v)                { return Int(v).value.ival; }
 unsigned int c_uint(Value v) {}
-long c_long(Value v)              { return toInt(v).value.i64val; }
-unsigned long c_ulong(Value v)    { return (unsigned long) toInt(v).value.i64val; }
-long long c_longlong(Value v)     { return toInt(v).value.i64val; }
-long long c_ulonglong(Value v)    { return (unsigned long) toInt(v).value.i64val; }
-unsigned long c_size_t(Value v)   { return (unsigned long) toInt(v).value.i64val; }
-long c_time_t(Value v)            { return toInt(v).value.i64val; }
-float c_float(Value v)            { return toFloat(v).value.fval; }
-double c_double(Value v)          { return toFloat(v).value.dval; }
-long double c_longdouble(Value v) { return toFloat(v).value.dval; }
-char *c_char_p(Value v)           { return toString(v).value.sval.str; }
+long c_long(Value v)              { return Int(v).value.ival; }
+unsigned long c_ulong(Value v)    { return (unsigned long) Int(v).value.ival; }
+long long c_longlong(Value v)     { return Int(v).value.ival; }
+long long c_ulonglong(Value v)    { return (unsigned long) Int(v).value.ival; }
+unsigned long c_size_t(Value v)   { return (unsigned long) Int(v).value.ival; }
+long c_time_t(Value v)            { return Int(v).value.ival; }
+float c_float(Value v)            { return (float) Float(v).value.fval; }
+double c_double(Value v)          { return Float(v).value.fval; }
+long double c_longdouble(Value v) { return Float(v).value.fval; }
+char *c_char_p(Value v)           { return String(v).value.sval.str; }
 wchar_t *c_wchar_p(Value v); //! Not supported yet
 void *c_void_p(Value v) {
   switch (v.tag) {
     case CHAR:
-      char *c_ptr = malloc(sizeof(v.value.cval));
+      char *c_ptr = (void*)malloc(sizeof(v.value.cval));
       if (c_ptr != NULL) {
         *c_ptr = v.value.cval;
       }
       return (void*) c_ptr;
       break;
     case INT:
-      long *l_ptr = malloc(sizeof(long));
+      long *l_ptr = (void*)malloc(sizeof(long));
       if (l_ptr != NULL) {
-        *l_ptr = v.value.i64val;
+        *l_ptr = v.value.ival;
       }
       return (void*) l_ptr;
       break;
     case FLOAT:
-      long *f_ptr = malloc(sizeof(double));
+      long *f_ptr = (void*)malloc(sizeof(double));
       if (f_ptr != NULL) {
-        *f_ptr = v.value.dval;;
+        *f_ptr = v.value.fval;;
       }
       return (void*) f_ptr;
       break;
@@ -444,26 +482,69 @@ void *c_void_p(Value v) {
       return (void*) v.value.sval.str;
       break;
     default:
-      printf("Error: Cannot convert '%s' to (void *)\n", typeOf(v));
+      printf("Error: Cannot convert '");
+      print(type(v)); printf("' to (void *)\n");
       exit(1);
       break;
   }
 }
 
+Value toString(char *str) {
+  return (Value) {STRING, .value.sval = {str, strlen(str)}};
+}
+
+Value toChar(char c) {
+  return (Value) {CHAR, .value.cval = c};
+}
+
+Value toInt(int i) {
+  return (Value) {INT, .value.ival = i};
+}
+
+Value toFloat(float f) {
+  return (Value) {FLOAT, .value.fval = f};
+}
+
+Value toBool(bool b) {
+  return (Value) {BOOL, .value.bval = b};
+}
+
 void print(Value data) {
-  if (data.is_none) {
+  if (data.tag == NONE_TYPE) {
     printf("None\n");
     return;
   } else if (data.tag == INT) {
-    printf("%d", data.value.i64val);
+    printf("%d", data.value.ival);
   } else if (data.tag == FLOAT) {
-    printf("%f", data.value.dval);
+    char str[20];
+    trim_float(str, data.value.fval);
+    printf("%s", str);
   } else if (data.tag == CHAR) {
     printf("%c", data.value.cval);
   } else if (data.tag == STRING) {
     printf("%s", data.value.sval.str);
   } else if (data.tag == BOOL) {
     printf("%s", data.value.bval ? "true" : "false");
+  } else if (data.tag == OBJECT && data.value.obj_ptr && data.value.obj_ptr->__to_string__) {
+    print(data.value.obj_ptr->__to_string__(data.value.obj_ptr));
+  } else if (data.tag == TYPE) {
+    switch (data.value.typeval) {
+      case CHAR: printf("char"); break;
+      case INT: printf("int"); break;
+      case FLOAT: printf("float"); break;
+      case STRING: printf("string"); break;
+      case BOOL: printf("bool"); break;
+      case OBJECT: 
+        if (data.value.obj_ptr->class_name) {
+          printf("<Object '%s'>", data.value.obj_ptr->class_name);
+        } else {
+          printf("<Unnamed Object>");
+        }
+        break;
+      default: printf("<Unknown Object '%d'>", data.value.typeval); break;
+    }
+  } else {
+    printf("<Unknown Object>");
   }
 }
 
@@ -483,7 +564,7 @@ Value readln() {
     buffer = realloc(buffer, (i + 1) * sizeof(char));
   }
   buffer[i] = '\0';
-  return (Value) {STRING, .value.sval = {buffer, i}, 0};
+  return (Value) {STRING, .value.sval = {buffer, i}};
 }
 
 // End mysdtlib

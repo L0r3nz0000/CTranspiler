@@ -158,7 +158,7 @@ TokenList tokenize_code(const char *code) {
 
       switch (best_match) {
         case TOKEN_INTEGER:
-          tokens[tokens_found - 1] = (Token) {TOKEN_INTEGER, {.value.i64val = atoi(value), 0}, best_start, length};
+          tokens[tokens_found - 1] = (Token) {TOKEN_INTEGER, {.value.ival = atoi(value), 0}, best_start, length};
           break;
         case TOKEN_FLOAT:
           tokens[tokens_found - 1] = (Token) {TOKEN_FLOAT, {.value.fval = atof(value), 0}, best_start, length};
@@ -205,7 +205,7 @@ void print_token_list(TokenList tl) {
       printf("%s}\n", tl.tokens[i].value.value.sval);
     } else if (tl.tokens[i].type == TOKEN_INTEGER) {
       if (!tl.tokens[i].value.is_none) {
-        printf("%d}\n", tl.tokens[i].value.value.i64val);
+        printf("%d}\n", tl.tokens[i].value.value.ival);
       } else {
         printf("NONE}\n");
       }

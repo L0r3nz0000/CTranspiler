@@ -171,17 +171,17 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_INT: {
       AST_INT data = ast->data.ast_int;
-      fprintf(f, "((Value) {INT, .value.i64val = %d, 0})", data.number);
+      fprintf(f, "((Value) {INT, .value.ival = %d})", data.number);
       return;
     }
     case TAG_FLOAT: {
       AST_FLOAT data = ast->data.ast_float;
-      fprintf(f, "((Value) {FLOAT, .value.fval = %f, 0})", data.number);
+      fprintf(f, "((Value) {FLOAT, .value.fval = %f})", data.number);
       return;
     }
     case TAG_STRING: {
       AST_STRING data = ast->data.ast_string;
-      fprintf(f, "((Value) {STRING, .value.sval = {\"%s\", %d}, 0})", data.string, strlen(data.string));
+      fprintf(f, "((Value) {STRING, .value.sval = {\"%s\", %d}})", data.string, strlen(data.string));
       return;
     }
     case TAG_FUN: {
@@ -191,7 +191,6 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
     }
     case TAG_CALL: {
       AST_CALL data = ast->data.ast_call;
-      if (nested_call) { printf("chiamata annidata a %s\n", data.name); } else { printf("chiamata non annidata a %s\n", data.name); }
       
       generate_function_call(data, f);
       if (!nested_call) {
