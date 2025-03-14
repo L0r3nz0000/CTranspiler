@@ -155,13 +155,16 @@ void trim_float(char *buffer, double fval) {
 
 Value add_operator(Value a, Value b) {  // Operatore +
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.ival = a.value.ival + b.value.ival};
+    return toInt(c_int(a) + c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.fval = a.value.fval + b.value.fval};
+    float result = c_float(a) + c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.ival = a.value.ival + b.value.fval};
+    float result = c_int(a) + c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.ival = a.value.fval + b.value.ival};
+    float result = c_float(a) + c_int(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else if (a.tag == STRING && b.tag == STRING) {
     return concat_strings(a, b);
   } else {
@@ -173,13 +176,16 @@ Value add_operator(Value a, Value b) {  // Operatore +
 
 Value sub_operator(Value a, Value b) {  // Operatore -
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.ival = a.value.ival - b.value.ival};
+    return toInt(c_int(a) - c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.fval = a.value.fval - b.value.fval};
+    float result = c_float(a) - c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.ival = a.value.ival - b.value.fval};
+    float result = c_int(a) - c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.ival = a.value.fval - b.value.ival};
+    float result = c_float(a) - c_int(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else {
     printf("Error: Invalid data types for '-' operator. Cannot subtract '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -189,19 +195,20 @@ Value sub_operator(Value a, Value b) {  // Operatore -
 
 Value mul_operator(Value a, Value b) {  // Operatore *
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.ival = a.value.ival * b.value.ival};
+    return toInt(c_int(a) * c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.fval = a.value.fval * b.value.fval};
+    float result = c_float(a) * c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.ival = a.value.ival * b.value.fval};
+    return toFloat(c_int(a) * c_float(b));
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.ival = a.value.fval * b.value.ival};
+    return toFloat(c_float(a) * c_int(b));
   } else if (a.tag == STRING && b.tag == INT) {
     if (b.value.ival < 0) {
       printf("Error: Cannot multiply string by negative number.\n");
       exit(1);
     }
-    Value result = {STRING, .value.sval = {"", 0}};
+    Value result = toString("");
 
     for (int i = 0; i < b.value.ival; i++) {
       result = concat_strings(result, a);
@@ -226,7 +233,7 @@ Value mul_operator(Value a, Value b) {  // Operatore *
 }
 
 Value div_operator(Value a, Value b) {  // Operatore /
-  if ((b.tag == INT && b.value.ival == 0) || (b.tag == FLOAT && b.value.fval == 0)) {
+  if ((b.tag == INT && c_int(b) == 0) || (b.tag == FLOAT && c_float(b) == 0)) {
     printf("Error: Zero division error (in module operation) Cannot divide '");
     print(a);
     printf("' by zero.\n");
@@ -235,13 +242,17 @@ Value div_operator(Value a, Value b) {  // Operatore /
 
 
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.ival = a.value.ival / b.value.ival};
+    float result = c_int(a) / c_int(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.fval = a.value.fval / b.value.fval};
+    float result = c_float(a) / c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {FLOAT, .value.ival = a.value.ival / b.value.fval};
+    float result = c_int(a) / c_float(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else  if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {FLOAT, .value.ival = a.value.fval / b.value.ival};
+    float result = c_float(a) / c_int(b);
+    return (int)result == result ? toInt(result) : toFloat(result);
   } else {
     printf("Error: Invalid data types for '/' operator. Cannot divide '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -250,15 +261,15 @@ Value div_operator(Value a, Value b) {  // Operatore /
 }
 
 Value mod_operator(Value a, Value b) { // Operatore %
-  if (b.tag == INT && b.value.ival == 0) {
-    printf("Error: Zero division error (in module operation) Cannot divide '");
+  if (b.tag == INT && c_int(b) == 0) {
+    printf("Error: Zero division error in module operation Cannot divide '");
     print(a);
     printf("' by zero.\n");
     exit(1);
   }
 
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {INT, .value.ival = a.value.ival % b.value.ival};
+    return toInt(c_int(a) % c_int(b));
   } else {
     printf("Error: Invalid data types for '%%' operator. Cannot divide '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -268,17 +279,17 @@ Value mod_operator(Value a, Value b) { // Operatore %
 
 Value is_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival == b.value.ival};
+    return toBool(c_int(a) == c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval == b.value.fval};
+    return toBool(c_float(a) == c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval == b.value.ival};
+    return toBool(c_float(a) == c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival == b.value.fval};
+    return toBool(c_int(a) == c_float(b));
   } else if (a.tag == STRING && b.tag == STRING) {
-    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) == 0};
+    return toBool(strcmp(c_char_p(a), c_char_p(b)) == 0);
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval == b.value.cval};
+    return toBool(c_char(a) == c_char(b));
   } else {
     printf("Error: Invalid data types for '==' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -288,17 +299,17 @@ Value is_equal(Value a, Value b) {
 
 Value is_not_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival != b.value.ival};
+    return toBool(c_int(a) != c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval != b.value.fval};
+    return toBool(c_float(a) != c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval != b.value.ival};
+    return toBool(c_float(a) != c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival != b.value.fval};
+    return toBool(c_int(a) != c_float(b));
   } else if (a.tag == STRING && b.tag == STRING) {
-    return (Value) {BOOL, .value.bval = strcmp(a.value.sval.str, b.value.sval.str) != 0};
+    return toBool(strcmp(c_char_p(a), c_char_p(b)) != 0);
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval != b.value.cval};
+    return toBool(c_char(a) != c_char(b));
   } else {
     printf("Error: Invalid data types for '!=' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -308,15 +319,15 @@ Value is_not_equal(Value a, Value b) {
 
 Value is_less(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival < b.value.ival};
+    return toBool(c_int(a) < c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval < b.value.fval};
+    return toBool(c_float(a) < c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval < b.value.ival};
+    return toBool(c_float(a) < c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival < b.value.fval};
+    return toBool(c_int(a) < c_float(b));
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval < b.value.cval};
+    return toBool(c_char(a) < c_char(b));
   } else {
     printf("Error: Invalid data types for '<' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -326,15 +337,15 @@ Value is_less(Value a, Value b) {
 
 Value is_greater(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival > b.value.ival};
+    return toBool(c_int(a) > c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval > b.value.fval};
+    return toBool(c_float(a) > c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval > b.value.ival};
+    return toBool(c_float(a) > c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival > b.value.fval};
+    return toBool(c_int(a) > c_float(b));
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval > b.value.cval};
+    return toBool(c_char(a) > c_char(b));
   } else {
     printf("Error: Invalid data types for '>' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -344,15 +355,15 @@ Value is_greater(Value a, Value b) {
 
 Value is_less_or_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival <= b.value.ival};
+    return toBool(c_int(a) <= c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval <= b.value.fval};
+    return toBool(c_float(a) <= c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval <= b.value.ival};
+    return toBool(c_float(a) <= c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival <= b.value.fval};
+    return toBool(c_int(a) <= c_float(b));
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval <= b.value.cval};
+    return toBool(c_char(a) <= c_char(b));
   } else {
     printf("Error: Invalid data types for '<=' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -362,15 +373,15 @@ Value is_less_or_equal(Value a, Value b) {
 
 Value is_greater_or_equal(Value a, Value b) {
   if (a.tag == INT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.ival >= b.value.ival};
+    return toBool(c_int(a) >= c_int(b));
   } else if (a.tag == FLOAT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.fval >= b.value.fval};
+    return toBool(c_float(a) >= c_float(b));
   } else if (a.tag == FLOAT && b.tag == INT) {
-    return (Value) {BOOL, .value.bval = a.value.fval >= b.value.ival};
+    return toBool(c_float(a) >= c_int(b));
   } else if (a.tag == INT && b.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = a.value.ival >= b.value.fval};
+    return toBool(c_int(a) >= c_float(b));
   } else if (a.tag == CHAR && b.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = a.value.cval >= b.value.cval};
+    return toBool(c_char(a) >= c_char(b));
   } else {
     printf("Error: Invalid data types for '>=' operator. Cannot compare '");
     print(type(a)); printf("' and '"); print(type(b)); printf("'.\n");
@@ -382,13 +393,13 @@ Value Bool(Value v) {
   if (v.tag == BOOL) {
     return v;
   } else if (v.tag == INT) {
-    return (Value) {BOOL, .value.bval = v.value.ival != 0};
+    return is_not_equal(v, toInt(0));
   } else if (v.tag == FLOAT) {
-    return (Value) {BOOL, .value.bval = v.value.fval != 0};
+    return is_not_equal(v, toFloat(0));
   } else if (v.tag == STRING) {
-    return (Value) {BOOL, .value.bval = v.value.sval.size > 0};
+    return is_greater(v, toInt(0));
   } else if (v.tag == CHAR) {
-    return (Value) {BOOL, .value.bval = v.value.cval != '\0'};
+    return is_not_equal(v, toChar('\0'));
   } else {
     printf("Error: Cannot convert '");
     print(type(v)); printf(" to bool.\n");
@@ -628,19 +639,11 @@ Value readln() {
     buffer = realloc(buffer, (i + 1) * sizeof(char));
   }
   buffer[i] = '\0';
-  return (Value) {STRING, .value.sval = {buffer, i}};
+  return toString(buffer);
 }
 
 // End mysdtlib
 #endif
-Value __init__(Value a, Value b) {
-a = a;
-b = b;
-}
 Value somma() {
-add_operator(return, this)}
-int main() {
-Value var = NONE;
-println(((Value) {FLOAT, .value.fval = 3.140000}));
-return c_int(((Value) {INT, .value.ival = 0}));
+return add_operator(thisa, thisb);
 }

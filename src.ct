@@ -1,20 +1,20 @@
-class Somma {
-  @ a = NONE;
-  @ b = NONE;
-
-  fun __init__(a, b) => {
-    this.a = a;
-    this.b = b;
-  }
-
-  fun somma() => {
-    return this.a + this.b;
-  }
-}
-
 
 fun main() => {
   @ var = NONE;
   println(3.14);
   <- 0;
-} 
+}
+
+class Somma {
+  @ a;
+  @ b;
+
+  fun __init__(a, b) => {
+    thisa = a;
+    thisb = b;
+  }
+
+  fun somma() => {
+    <- thisa + thisb;
+  }
+}

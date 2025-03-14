@@ -276,7 +276,7 @@ void generate_code(AST *ast, FILE *f, bool main, bool nested_call) {
   }
 }
 
-void generate_c_code(PROGRAM *program, FILE *f) {
+void generate_c_code(AST_BLOCK *block, FILE *f) {
   FILE *src = fopen("src/mystdlib.h", "r");  // Carica la libreria standard
 
   if (!src) {
@@ -291,8 +291,8 @@ void generate_c_code(PROGRAM *program, FILE *f) {
 
   fclose(src);
 
-  for (int i = 0; i < program->block->count; i++) {
-    AST *ast = program->block->statements[i];
+  for (int i = 0; i < block->count; i++) {
+    AST *ast = block->statements[i];
     generate_code(ast, f, false, false);
   }
 }

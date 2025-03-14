@@ -72,15 +72,10 @@ int main(int argc, char *argv[]) {
   print_token_list(tokens);
   printf("\n");
 
-  PROGRAM *program = parse_program(tokens, true);
+  AST_BLOCK *block = parse_program(tokens, true, true);
 
-  printf("Symbol table:\n");
-  for (int i = 0; i < program->symbol_table->count; i++) {
-    printf("  variable: %s\n", program->symbol_table->vars[i].name);
-  }
-
-  for (int i = 0; i < program->block->count; i++) {
-    print_tree(program->block->statements[i], 0);
+  for (int i = 0; i < block->count; i++) {
+    print_tree(block->statements[i], 0);
   }
 
   FILE *f = fopen("out.c", "w");
@@ -90,7 +85,7 @@ int main(int argc, char *argv[]) {
   }
   
   // Write code on file
-  generate_c_code(program, f);
+  generate_c_code(block, f);
 
   bool static_binary = false;
 
