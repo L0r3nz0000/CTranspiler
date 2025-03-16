@@ -205,7 +205,7 @@ void print_token_list(TokenList tl) {
       continue;
     }
 
-    printf("(Token) {%s, value: ", TOKEN_NAMES[tl.tokens[i].type]);
+    printf("[%d](Token) {%s, value: ", i, TOKEN_NAMES[tl.tokens[i].type]);
     if (tl.tokens[i].type == TOKEN_STRING || tl.tokens[i].type == TOKEN_IDENTIFIER) {
       printf("%s}\n", tl.tokens[i].value.value.sval);
     } else if (tl.tokens[i].type == TOKEN_INTEGER) {

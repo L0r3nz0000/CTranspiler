@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-void generate_c_code(PROGRAM *program, FILE* f);
+void generate_c_code(AST_BLOCK *block, FILE* f);
 void generate_code(AST *ast, FILE *f, bool main, bool nested_call);
 
 #endif
