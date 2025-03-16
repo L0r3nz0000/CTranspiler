@@ -1,20 +1,18 @@
+import "time.h";
 
 fun main() => {
-  @ var = NONE;
-  println(3.14);
-  <- 0;
+  @ start = toInt(clock());
+  @ i = 0;
+
+  while (i < 100000000) {
+    i = i + 1;
+  }
+  @ end = toInt(clock());
+
+  @ tempo_trascorso = end - start;
+  tempo_trascorso = tempo_trascorso / toFloat(CLOCKS_PER_SEC);
+
+  print("Finito in " + String(tempo_trascorso));
+  println(" secondi");
 }
 
-class Somma {
-  @ a;
-  @ b;
-
-  fun __init__(a, b) => {
-    thisa = a;
-    thisb = b;
-  }
-
-  fun somma() => {
-    <- thisa + thisb;
-  }
-}

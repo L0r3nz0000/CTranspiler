@@ -44,7 +44,7 @@ typedef struct {
 } PROGRAM;
 
 typedef struct { VarType type; char *name; } AST_VAR;
-typedef struct { char* name; AST *value; } AST_ASSIGN;  // TODO: usare AST_VAR per il nome
+typedef struct { AST* name; AST *value; } AST_ASSIGN;
 
 typedef struct { int32_t number; } AST_INT;
 typedef struct { float number; } AST_FLOAT;
@@ -72,10 +72,18 @@ typedef struct {
   AST_BLOCK *body;        // Body (array of instructions)
 } AST_FUNCT;
 
-typedef AST_FUNCT AST_METHOD;
-typedef struct { char *name; } AST_FIELD;
+typedef struct {
+  char *class_name;
+  char *name;     
+  char **params;  
+  int param_count;
+  AST_BLOCK *body;
+} AST_METHOD;
 
-typedef struct { 
+typedef struct { char *name; } AST_FIELD;
+typedef struct { char *name; char *field; } AST_FIELD_ACCESS;
+
+typedef struct {
   char *name; 
   AST **fields;
   int field_count;
@@ -85,13 +93,20 @@ typedef struct {
 } AST_CLASS;
 
 typedef struct { AST *value; } AST_RETURN;
-typedef struct { VarType type; char *name; AST *value; } AST_DECLARE;
+typedef struct { VarType type; AST *name; AST *value; } AST_DECLARE;
 
 typedef struct {
   char *name;         // Name of the called function
   AST **args;         // Argument list
   int arg_count;      // Number of arguments
 } AST_CALL;
+
+typedef struct {
+  char *class_name;
+  char *name;   
+  AST **args;   
+  int arg_count;
+} AST_METHOD_CALL;
 
 typedef enum {
   TAG_ASSIGN,
@@ -117,6 +132,8 @@ typedef enum {
   TAG_CLASS,
   TAG_METHOD,
   TAG_FIELD,
+  TAG_FIELD_ACCESS,
+  TAG_METHOD_CALL,
 } AST_TAG;
 
 typedef struct AST {
@@ -140,6 +157,8 @@ typedef struct AST {
     AST_CLASS ast_class;
     AST_METHOD ast_method;
     AST_FIELD ast_field;
+    AST_FIELD_ACCESS ast_field_access;
+    AST_METHOD_CALL ast_method_call;
 
     // Operatori binari
     AST_ADD ast_add;
@@ -151,20 +170,21 @@ typedef struct AST {
 } AST;
 
 AST *new_ast(AST ast);
-AST *new_ast_assign(char *name, AST *value);
+AST *new_ast_assign(AST *name, AST *value);
 AST *new_ast_int64(int64_t number);
-AST *new_ast_float(float number);
+AST *new_ast_float(double number);
 AST *new_ast_add(AST *left, AST *right);
 AST *new_ast_sub(AST *left, AST *right);
 AST *new_ast_mul(AST *left, AST *right);
 AST *new_ast_div(AST *left, AST *right);
 AST *new_ast_funct(char *name, char **params, int param_count, AST_BLOCK *body);
-AST *new_ast_declare(char *name, AST *value);
+AST *new_ast_declare(AST *name, AST *value);
 AST *new_ast_var(char *name);
 
 VarType typeOf(AST* ast);  // Returns the data type of something
 AST *generate_tree(TokenList tl);
 void print_tree(AST *node, int indent);
-void *parse_program(TokenList tl, bool parse_functions, bool parse_classes);
+AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool parse_classes);
+AST_BLOCK *define_all_functions(TokenList tl, int max_depth);
 
 #endif

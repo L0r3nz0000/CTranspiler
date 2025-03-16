@@ -93,11 +93,13 @@ int main(int argc, char *argv[]) {
   fclose(f);
 
   // Compiles the output with gcc
+
   if (static_binary) {
     system("gcc -s out.c -o out -nostdlib -ffreestanding -static");
   } else {
     system("gcc -s out.c -o out");
   }
+  
   // Compiles the assembly with nasm
   // system("nasm -f elf64 -g out.asm -o out.o");
   // system("gcc -no-pie out.o -o out -nostartfiles");  // Links the binary

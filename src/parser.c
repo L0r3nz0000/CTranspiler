@@ -9,7 +9,7 @@ AST *new_ast(AST ast) {
   return ptr;
 }
 
-AST *new_ast_assign(char *name, AST *value) {
+AST *new_ast_assign(AST *name, AST *value) {
   return new_ast((AST) {
     .tag = TAG_ASSIGN,
     .data = {
@@ -32,7 +32,7 @@ AST *new_ast_int64(int64_t number) {
   });
 }
 
-AST *new_ast_float(float number) {
+AST *new_ast_float(double number) {
   return new_ast((AST) {
     .tag = TAG_FLOAT,
     .data = {
@@ -141,6 +141,20 @@ AST *new_ast_call(char *name, AST **args, int arg_count) {
   });
 }
 
+AST *new_ast_call_method(char *class_name, char *method_name, AST **args, int arg_count) {
+  return new_ast((AST) {
+    .tag = TAG_METHOD_CALL,
+    .data = {
+      .ast_method_call = {
+        .class_name = class_name,
+        .name = method_name,
+        .args = args,
+        .arg_count = arg_count,
+      },
+    },
+  });
+}
+
 AST *new_ast_return(AST *value) {
   return new_ast((AST) {
     .tag = TAG_RETURN,
@@ -153,7 +167,7 @@ AST *new_ast_return(AST *value) {
 }
 
 
-AST *new_ast_declare(char *name, AST *value) {
+AST *new_ast_declare(AST *name, AST *value) {
   return new_ast((AST) {
     .tag = TAG_DECLARE,
     .data = {
@@ -238,7 +252,7 @@ AST *new_ast_condition(AST *left, AST *right, TokenType type) {
   });
 }
 
-AST *new_ast_class(char *name, AST_FIELD *fields, int field_count, AST_METHOD **methods, int method_count) {
+AST *new_ast_class(char *name, AST **fields, int field_count, AST **methods, int method_count) {
   return new_ast((AST) {
     .tag = TAG_CLASS,
     .data = {
@@ -253,26 +267,39 @@ AST *new_ast_class(char *name, AST_FIELD *fields, int field_count, AST_METHOD **
   });
 }
 
-AST *new_ast_method(char *name, char **params, int param_count, AST_BLOCK *body) {
-  return new_ast((AST) {
-    .tag = TAG_METHOD,
-    .data = {
-      .ast_method = {
-        .name = name,
-        .params = params,
-        .param_count = param_count,
-        .body = body,
-      },
-    },
-  });
-}
-
 AST *new_ast_field(char *name) {
   return new_ast((AST) {
     .tag = TAG_FIELD,
     .data = {
       .ast_field = {
         .name = name,
+      },
+    },
+  });
+}
+
+AST *new_ast_field_access(char *name, char *field) {
+  return new_ast((AST) {
+    .tag = TAG_FIELD_ACCESS,
+    .data = {
+      .ast_field_access = {
+        .name = name,
+        .field = field,
+      },
+    },
+  });
+}
+
+AST *new_ast_method(char *class_name, char *name, char **params, int param_count, AST_BLOCK *body) {
+  return new_ast((AST) {
+    .tag = TAG_METHOD,
+    .data = {
+      .ast_method = {
+        .class_name = class_name,
+        .name = name,
+        .params = params,
+        .param_count = param_count,
+        .body = body,
       },
     },
   });
@@ -516,6 +543,11 @@ AST *function_definition(TokenList tl) {
   return new_ast_funct(name, params, param_count, block);
 }
 
+// Converte una funzione in un metodo di classe
+AST *function_to_method(AST *fun, char *class_name) {
+  return new_ast_method(class_name, fun->data.ast_funct.name, fun->data.ast_funct.params, fun->data.ast_funct.param_count, fun->data.ast_funct.body);
+}
+
 /*
 class MyClass {
   @ field1 = 2;
@@ -529,42 +561,34 @@ class MyClass {
 
 */
 AST *class_definition(TokenList tl) {
-  char *name = tl.tokens[1].value.value.sval; // Nome classe
-  printf("Classe: %s\n", name);
+  char *class_name = tl.tokens[1].value.value.sval; // Nome classe
 
   int field_count = 0;
-  AST **fields = malloc(sizeof(char *) * 50); // Max 50 fields
+  AST **fields = malloc(sizeof(AST *) * 50); // Max 50 fields
 
   int method_count = 0;
-  AST **methods = malloc(sizeof(AST_METHOD *) * 50);  // Max 50 methods
-
-  AST_BLOCK *methods_block = parse_program(tl, true, false);
+  AST **methods = malloc(sizeof(AST *) * 50); // Max 50 methods
   
   int paren_depth = 0;
   for (int i = 0; i < tl.size; i++) {
-    // TODO: tenere in considerazione la profondità del blocco
     if (tl.tokens[i].type == TOKEN_LPAREN) paren_depth++;
     if (tl.tokens[i].type == TOKEN_RPAREN) paren_depth--;
     
     if (paren_depth == 0) {
       if (tl.tokens[i].type == TOKEN_DECLARE && tl.tokens[i+1].type == TOKEN_IDENTIFIER && tl.tokens[i+2].type == TOKEN_EOL) {
-        fields[field_count++] = malloc(sizeof(AST_FIELD));
-        fields[field_count-1]->data.ast_field.name = tl.tokens[i+1].value.value.sval;
-        fields[field_count-1]->tag = TAG_FIELD;
+        fields[field_count++] = new_ast_field(tl.tokens[i+1].value.value.sval);
       }
     }
   }
   
+  AST_BLOCK *methods_block = define_all_functions(tl, 1);
+
   for (int i = 0; i < methods_block->count; i++) {
     AST *node = methods_block->statements[i];
-
-    if (node->tag == TAG_FUN) {
-      methods[method_count++] = node;
-      methods[method_count-1]->tag = TAG_FUN;
-    }
+    methods[method_count++] = function_to_method(node, class_name);
   }
 
-  return new_ast_class(name, fields, field_count, methods, method_count);
+  return new_ast_class(class_name, fields, field_count, methods, method_count);
 }
 
 bool ends_with(const char *str, const char *suffix) {
@@ -661,7 +685,12 @@ AST *generate_tree(TokenList tl) {
 
     AST *condition_ast = new_ast_condition(start_value_ast, to_value_ast, condition_type);
 
-    return new_ast_for(init_ast, condition_ast, step_ast, parse_program(body, false, false));
+    AST_BLOCK *body_ast = parse_program(body, false, false);
+    if (body_ast->count == 0) {
+      printf("Warning: empty for loop\n");
+    }
+
+    return new_ast_for(init_ast, condition_ast, step_ast, body_ast);
   }
 
   /*
@@ -690,10 +719,8 @@ AST *generate_tree(TokenList tl) {
     int arg_count = 0;
     AST **args = malloc(sizeof(AST *) * 20);
 
+    //TokenList args_tl = extract_parentheses(tl);
     TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
-    printf("args:\n");
-    print_token_list(args_tl);
-
 
     // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
     int paren_depth = 0;
@@ -702,8 +729,6 @@ AST *generate_tree(TokenList tl) {
       if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
 
       if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
-        // printf("Argomento: \n");
-        // print_token_list(slice(args_tl, 0, j));
         args[arg_count++] = generate_tree(slice(args_tl, 0, j));
         args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
         j = 0;
@@ -717,10 +742,38 @@ AST *generate_tree(TokenList tl) {
     return new_ast_call(name, args, arg_count);
   }
 
-  if (tl.tokens[0].type == TOKEN_DECLARE) {
-    printf("declare\n");
-    print_token_list(tl);
+
+  //! ATTENZIONE: questa è una semplificazione di una chiamata ad un metodo e va sostituita da una analisi sintattica più avanzata
+  // Gestisce le chiamate a metodi
+  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER && tl.tokens[3].type == TOKEN_LPAREN) {
+    char *class_name = tl.tokens[0].value.value.sval;
+    char *method_name = tl.tokens[2].value.value.sval;
+    int arg_count = 0;
+    AST **args = malloc(sizeof(AST *) * 20);
+
+    TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
+
+    // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
+    int paren_depth = 0;
+    for (int j = 0; j < args_tl.size; j++) {
+      if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
+      if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
+
+      if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
+        args[arg_count++] = generate_tree(slice(args_tl, 0, j));
+        args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
+        j = 0;
+      }
+    }
+
+    // Aggiunge l'ultimo argomento
+    if (args_tl.size > 0) {
+      args[arg_count++] = generate_tree(args_tl);
+    }
+
+    return new_ast_call_method(class_name, method_name, args, arg_count);
   }
+
 
   // Fields
   for (int i = 0; i < tl.size; i++) {
@@ -740,11 +793,26 @@ AST *generate_tree(TokenList tl) {
     Token *token = &tl.tokens[i];
 
     if (token->type == TOKEN_ASSIGN) {  // Operatore =
-      TokenList sublist = { .tokens = &tl.tokens[i + 1], .size = tl.size - (i + 1) };
+      TokenList right_sublist = { .tokens = &tl.tokens[i + 1], .size = tl.size - (i + 1) };
+      TokenList left_sublist = (TokenList) {tl.tokens, i};
+
       if (tl.tokens[i-2].type == TOKEN_DECLARE) {
-        return new_ast_declare(tl.tokens[i-1].value.value.sval, generate_tree(sublist));
+        // printf("declare\n");
+        // printf("\tleft:\n\t\t");
+        // print_token_list(left_sublist);
+        // print_tree(generate_tree(left_sublist), 0);
+        // printf("\tright:\n\t\t");
+        // print_tree(generate_tree(right_sublist), 0);
+
+        left_sublist = (TokenList) {tl.tokens + i - 1, 1};  // Parsa soltanto il primo elemento a sinistra
+        return new_ast_declare(generate_tree(left_sublist), generate_tree(right_sublist));
       } else {
-        return new_ast_assign(tl.tokens[i-1].value.value.sval, generate_tree(sublist));
+        // printf("assign\n");
+        // printf("\tleft:\n\t\t");
+        // print_tree(generate_tree(left_sublist), 0);
+        // printf("\tright:\n\t\t");
+        // print_tree(generate_tree(right_sublist), 0);
+        return new_ast_assign(generate_tree(left_sublist), generate_tree(right_sublist));
       }
     }
 
@@ -757,7 +825,6 @@ AST *generate_tree(TokenList tl) {
         token->type == TOKEN_GREATER) {
       TokenList operand1 = slice(tl, 0, i);
       TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
-      printf("trovato operatore binario\n");
 
       return new_ast_condition(generate_tree(operand1), generate_tree(operand2), tl.tokens[i].type);
     }
@@ -768,12 +835,6 @@ AST *generate_tree(TokenList tl) {
 
     switch (token->type) {
       case TOKEN_SUM:
-        printf("somma\n");
-        printf("\toperatore1:\n");
-        print_token_list((TokenList) {tl.tokens, i});
-        printf("\toperatore2:\n");
-        print_token_list((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)});
-
         left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
         right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
         
@@ -820,6 +881,12 @@ AST *generate_tree(TokenList tl) {
     return new_ast_int64(tl.tokens[0].value.value.i32val);
   }
 
+  // TODO: gestire chiamate ai metodi di classe tramite '.'
+  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER) {
+    // TODO: gestire accessi a field "annidati" tipo name.field1.field2
+    return new_ast_field_access(tl.tokens[0].value.value.sval, tl.tokens[2].value.value.sval);
+  }
+
   if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
     return new_ast_var(tl.tokens[0].value.value.sval);
   }
@@ -862,8 +929,7 @@ AST_BLOCK *concat_ast_blocks(AST_BLOCK *block1, AST_BLOCK *block2) {
   return new_block;
 }
 
-AST_BLOCK *define_all_functions(TokenList tl) {
-  int fun_index = -1, block_end = -1;
+AST_BLOCK *define_all_functions(TokenList tl, int depth) {
   AST_BLOCK *functions = malloc(sizeof(AST_BLOCK));
   if (!functions) {
     fprintf(stderr, "Errore nell'allocazione della memoria per functions.\n");
@@ -872,26 +938,42 @@ AST_BLOCK *define_all_functions(TokenList tl) {
   functions->statements = NULL;  // Inizializzazione della lista vuota
   functions->count = 0;
 
+  int fun_index, block_end = -1;
+  int function_depth = 0;
+  int start_index = 0;
+
   do {
-    fun_index = find(tl, TOKEN_FUN);    // Inizio della definizione di funzione
+    // Cerca i token 'fun' a profondità N per evitare i metodi di classe
+    fun_index = -1;
+    for (int i = start_index; i < tl.size; i++) {
+      if (tl.tokens[i].type == TOKEN_LBRACE) function_depth++;
+      if (tl.tokens[i].type == TOKEN_RBRACE) function_depth--;
+
+      if (tl.tokens[i].type == TOKEN_FUN && function_depth <= depth) {
+        fun_index = i;
+        break;
+      }
+    }
+
     if (fun_index == -1) break;
 
-    TokenList sublist = slice(tl, fun_index, tl.size - fun_index);  // Taglia da 'fun' alla fine
-    block_end = find_block_end(sublist);  // Cerca la } di chiusura
+    block_end = fun_index + find_block_end(slice(tl, fun_index, tl.size - fun_index));  // Cerca la } di chiusura
+
+    // printf("FUN token: %d\n", fun_index);
+    // printf("RBRACE token: %d\n\n", block_end);
 
     if (block_end == -1) {
       fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
       exit(1);
     }
     
-    sublist = slice_from_to(sublist, 0, block_end + 1);
-    
+    TokenList sublist = slice_from_to(tl, fun_index, block_end + 1);
+
     AST *function = function_definition(sublist);
 
     // Aggiunge la funzione al blocco funzioni
     add_ast_to_block(functions, function);
-    tl.tokens = &tl.tokens[block_end + 1];
-    tl.size -= (block_end + 1);
+    start_index = block_end + 1;
   } while (fun_index != -1);
 
   return functions;
@@ -956,18 +1038,7 @@ SYMBOL_TABLE *find_symbols(TokenList tl) {
   return symbol_table;
 }
 
-
-/*
-parse_functions = false
-  ritorna AST_BLOCK *
-
-parse_functions = true
-  ritorna PROGRAM *
-  (AST_BLOCK + SYMBOL_TABLE)
-*/
-void *parse_program(TokenList tl, bool parse_functions, bool _parse_classes) {
-  if (tl.size == 0) return NULL;
-
+AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool _parse_classes) {
   // Inizializza il blocco principale del programma
   AST_BLOCK *block = malloc(sizeof(AST_BLOCK));
   if (!block) {
@@ -991,14 +1062,14 @@ void *parse_program(TokenList tl, bool parse_functions, bool _parse_classes) {
 
   // Aggiunge tutte le funzioni definite all'inizio del programma
   if (_parse_classes || parse_functions) {
+    if (parse_functions) {
+      AST_BLOCK *functions = define_all_functions(tl, 0);
+      block = concat_ast_blocks(block, functions);
+    }
+
     if (_parse_classes) {
       AST_BLOCK *classes = parse_classes(tl);
       block = concat_ast_blocks(block, classes);
-    } 
-    
-    if (parse_functions) {
-      AST_BLOCK *functions = define_all_functions(tl);
-      block = concat_ast_blocks(block, functions);
     }
 
     return block;
@@ -1058,7 +1129,8 @@ void print_tree(AST *node, int indent) {
   // Stampa il nodo in base al tipo
   switch (node->tag) {
     case TAG_ASSIGN:
-      printf("Assign: %s\n", node->data.ast_assign.name);
+      printf("Assign: \n");
+      print_tree(node->data.ast_assign.name, indent + 1);
       print_tree(node->data.ast_assign.value, indent + 1);
       break;
     case TAG_INT:
@@ -1124,10 +1196,31 @@ void print_tree(AST *node, int indent) {
         }
       }
       break;
+    case TAG_METHOD:
+      printf("Method: %s (class: %s) (params: %d)\n", node->data.ast_method.name, node->data.ast_method.class_name, node->data.ast_method.param_count);
+      for (int i = 0; i < node->data.ast_method.param_count; i++) {
+        for (int j = 0; j < indent + 1; j++) printf("|  ");
+        printf("Param: %s\n", node->data.ast_method.params[i]);
+      }
+      // Stampa il blocco di codice
+      if (node->data.ast_method.body->count == 0 || node->data.ast_method.body->statements == NULL) {
+        printf("|  (Empty method body)\n");
+      } else {
+        for (int i = 0; i < node->data.ast_method.body->count; i++) {
+          print_tree(node->data.ast_method.body->statements[i], indent + 1);
+        }
+      }
+      break;
     case TAG_CALL:
       printf("Function Call: %s (args: %d)\n", node->data.ast_call.name, node->data.ast_call.arg_count);
       for (int i = 0; i < node->data.ast_call.arg_count; i++) {
         print_tree(node->data.ast_call.args[i], indent + 1);
+      }
+      break;
+    case TAG_METHOD_CALL:
+      printf("Method Call: %s.%s (args: %d)\n", node->data.ast_method_call.class_name, node->data.ast_method_call.name, node->data.ast_method_call.arg_count);
+      for (int i = 0; i < node->data.ast_method_call.arg_count; i++) {
+        print_tree(node->data.ast_method_call.args[i], indent + 1);
       }
       break;
     case TAG_RETURN:
@@ -1137,8 +1230,12 @@ void print_tree(AST *node, int indent) {
     case TAG_FIELD:
       printf("Field: %s\n", node->data.ast_field.name);
       break;
+    case TAG_FIELD_ACCESS:
+      printf("Field Access: %s.%s\n", node->data.ast_field_access.name, node->data.ast_field_access.field);
+      break;
     case TAG_DECLARE:
-      printf("Declare: %s\n", node->data.ast_declare.name);
+      printf("Declare: \n");
+      print_tree(node->data.ast_declare.name, indent + 1);
       print_tree(node->data.ast_declare.value, indent + 1);
       break;
     case TAG_SYSTEM_IMPORT:
