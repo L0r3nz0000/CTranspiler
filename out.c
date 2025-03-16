@@ -633,14 +633,15 @@ Value readln() {
 
 // End mysdtlib
 #endif
-Value __init__(Value a, Value b) {
-a = a;
-b = b;
-}
-Value somma() {
-add_operator(return, this)}
+#include <time.h>
 int main() {
-Value var = NONE;
-println(((Value) {FLOAT, .value.fval = 3.140000}));
-return c_int(((Value) {INT, .value.ival = 0}));
+Value start = toInt(clock());
+Value i = ((Value) {INT, .value.ival = 0});
+while (c_bool(is_less(i, ((Value) {INT, .value.ival = 100000000})))) {
+i = add_operator(i, ((Value) {INT, .value.ival = 1}));
+}
+Value end = toInt(clock());
+Value tempo_trascorso = sub_operator(end, start);
+tempo_trascorso = div_operator(tempo_trascorso, toFloat(CLOCKS_PER_SEC));
+print(add_operator(((Value) {STRING, .value.sval = {"Finito in ", 10}}), String(tempo_trascorso)));
 }
