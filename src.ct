@@ -12,7 +12,6 @@ fun main() => {
   @ tempo_trascorso = end - start;
   tempo_trascorso = tempo_trascorso / toFloat(CLOCKS_PER_SEC);
 
-  print("Finito in " + String(tempo_trascorso));
-  println(" secondi");
+  print("Finito in " + String(tempo_trascorso) + " secondi");
 }
 
