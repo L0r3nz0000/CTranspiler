@@ -684,6 +684,7 @@ Value Int(Value v) {
     return (Value) {INT, .value.ival = (int)v.value.fval};
   } else if (v.tag == STRING) {
     long num = atoi(v.value.sval.str);
+    //! errore GRAVISSIMO hahahah
     if (num == 0) {
       float fnum = atof(v.value.sval.str);
       if (fnum == 0) {
