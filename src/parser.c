@@ -602,6 +602,56 @@ bool ends_with(const char *str, const char *suffix) {
   return strcmp(str + (str_len - suffix_len), suffix) == 0;
 }
 
+AST *parse_expression(TokenList tl) {
+  TokenList tl_left, tl_right;
+  AST *left, *right;
+
+  for (int i = 0; i < tl.size; i++) {  // Operatori {+, -}
+    tl_left = (TokenList) {tl.tokens, i};
+    tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
+
+    switch (tl.tokens[i].type) {
+      case TOKEN_SUM:
+        left = generate_tree(tl_left); // Prende i token fino all'operatore
+        right = generate_tree(tl_right); // Token dopo l'operatore
+        
+        return new_ast_add(left, right);
+      break;
+      case TOKEN_SUB:
+        left = generate_tree(tl_left); // Prende i token fino all'operatore
+        right = generate_tree(tl_right); // Token dopo l'operatore
+
+        return new_ast_sub(left, right);
+      break;
+    }
+  }
+  
+  for (int i = 0; i < tl.size; i++) {  // Operatori {*, /, %}
+    tl_left = (TokenList) {tl.tokens, i};
+    tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
+
+    switch (tl.tokens[i].type) {
+      case TOKEN_MUL:
+        left = generate_tree(tl_left); // Prende i token fino all'operatore
+        right = generate_tree(tl_right); // Token dopo l'operatore
+        
+        return new_ast_mul(left, right);
+      break;
+      case TOKEN_DIV:
+        left = generate_tree(tl_left); // Prende i token fino all'operatore
+        right = generate_tree(tl_right); // Token dopo l'operatore
+        
+        return new_ast_div(left, right);
+      case TOKEN_PERCENT:
+        left = generate_tree(tl_left); // Prende i token fino all'operatore
+        right = generate_tree(tl_right); // Token dopo l'operatore
+        
+        return new_ast_mod(left, right);
+      break;
+    }
+  }
+}
+
 AST *generate_tree(TokenList tl) {
   Variable *symbol_table = NULL;
   if (tl.size == 0 || tl.tokens == NULL) { return NULL; }
@@ -830,47 +880,11 @@ AST *generate_tree(TokenList tl) {
     }
   }
 
-  for (int i = 0; i < tl.size; i++) {  // Operatori {+, -}
-    Token *token = &tl.tokens[i];
-
-    switch (token->type) {
-      case TOKEN_SUM:
-        left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
-        right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
-        
-        return new_ast_add(left, right);
-      break;
-      case TOKEN_SUB:
-        left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
-        right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
-
-        return new_ast_sub(left, right);
-      break;
-    }
-  }
-  
-  for (int i = 0; i < tl.size; i++) {  // Operatori {*, /, %}
-    Token *token = &tl.tokens[i];
-
-    switch (token->type) {
-      case TOKEN_MUL:
-        left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
-        right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
-        
-        return new_ast_mul(left, right);
-      break;
-      case TOKEN_DIV:
-        left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
-        right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
-        
-        return new_ast_div(left, right);
-      case TOKEN_PERCENT:
-        left = generate_tree((TokenList) {tl.tokens, i}); // Prende i token fino all'operatore
-        right = generate_tree((TokenList) {tl.tokens + i + 1, tl.size - (i + 1)}); // Token dopo l'operatore
-        
-        return new_ast_mod(left, right);
-      break;
-    }
+  // Parsing delle espressioni aritmetiche
+  if (find(tl, TOKEN_SUM) == -1 || find(tl, TOKEN_SUB) == -1 || 
+      find(tl, TOKEN_MUL) == -1 || find(tl, TOKEN_DIV) == -1 ||
+      find(tl, TOKEN_PERCENT) == -1) {
+    return parse_expression(tl);
   }
 
   if (tl.tokens[0].type == TOKEN_FLOAT) {

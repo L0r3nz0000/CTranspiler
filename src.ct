@@ -1,17 +1,6 @@
 import "time.h";
 
 fun main() => {
-  @ start = toInt(clock());
-  @ i = 0;
-
-  while (i < 100000000) {
-    i = i + 1;
-  }
-  @ end = toInt(clock());
-
-  @ tempo_trascorso = end - start;
-  tempo_trascorso = tempo_trascorso / toFloat(CLOCKS_PER_SEC);
-
-  print("Finito in " + String(tempo_trascorso) + " secondi");
+  @ i = 3 - 4 * 2 + 5;
 }
 
