@@ -817,4 +817,5 @@ Value readln() {
 #include <time.h>
 int main() {
 Value i = sub_operator(((Value) {INT, .value.ival = 3}), add_operator(mul_operator(((Value) {INT, .value.ival = 4}), ((Value) {INT, .value.ival = 2})), ((Value) {INT, .value.ival = 5})));
+println(i);
 }
