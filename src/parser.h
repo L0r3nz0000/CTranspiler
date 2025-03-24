@@ -159,6 +159,7 @@ typedef struct AST {
     AST_FIELD ast_field;
     AST_FIELD_ACCESS ast_field_access;
     AST_METHOD_CALL ast_method_call;
+    AST_BLOCK ast_block;
 
     // Operatori binari
     AST_ADD ast_add;

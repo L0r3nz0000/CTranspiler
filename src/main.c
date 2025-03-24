@@ -72,10 +72,11 @@ int main(int argc, char *argv[]) {
   print_token_list(tokens);
   printf("\n");
 
-  AST_BLOCK *block = parse_program(tokens, true, true);
+  load_tokens(tokens);
+  AST *block = parse_program();
 
-  for (int i = 0; i < block->count; i++) {
-    print_tree(block->statements[i], 0);
+  for (int i = 0; i < block->data.ast_block.count; i++) {
+    print_tree(block->data.ast_block.statements[i], 0);
   }
 
   FILE *f = fopen("out.c", "w");
@@ -94,11 +95,11 @@ int main(int argc, char *argv[]) {
 
   // Compiles the output with gcc
 
-  if (static_binary) {
-    system("gcc -s out.c -o out -nostdlib -ffreestanding -static");
-  } else {
-    system("gcc -s out.c -o out");
-  }
+  // if (static_binary) {
+  //   system("gcc -s out.c -o out -nostdlib -ffreestanding -static");
+  // } else {
+  //   system("gcc -s out.c -o out");
+  // }
   
   // Compiles the assembly with nasm
   // system("nasm -f elf64 -g out.asm -o out.o");

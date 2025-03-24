@@ -1119,6 +1119,116 @@ AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool _parse_classes
   return block;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TokenList tokens;
+int current = 0;
+
+// ! ATTENZIONE: tokens.tokens punta a tl.tokens quindi non deallocare
+void load_tokens(TokenList tl) {
+  tokens = tl;
+}
+
+// Legge il token senza consumarlo
+Token peek(int offset) {
+  return tokens.tokens[current + offset];
+}
+
+// Consuma il token e avanza
+Token consume() {
+  return tokens.tokens[current++];
+}
+
+AST *parse_expression() {
+  // TODO: da implementare
+}
+
+AST *parse_if() {
+  expect(TOKEN_IF);
+  expect(TOKEN_LPAREN);
+  parse_expression();
+  expect(TOKEN_RPAREN);
+  parse_block();
+  if (peek(0).type == TOKEN_ELSE) {
+    consume();  // Consuma "else"
+    parse_block();
+  }
+}
+
+
+AST *parse_function_definition() {
+  char *name = tokens.tokens[1].value.value.sval; // Nome funzione
+  int param_count = 0;
+  char **params = malloc(sizeof(char *) * 20); // Max 20 parametri
+
+  // Legge i parametri
+  int i = 3;  // Salta "fun", il nome e (
+  while (tl.tokens[i].type != TOKEN_RPAREN) {
+    if (tl.tokens[i].type == TOKEN_IDENTIFIER) {
+      params[param_count++] = tl.tokens[i].value.value.sval;
+    }
+    i++;
+  }
+
+  i++; // Salta il token =>
+
+  // Analizza il blocco codice della funzione
+  TokenList body = extract_block(tl);
+
+  AST_BLOCK *block = parse_program(body, false, false);
+
+  // Crea il nodo funzione
+  return new_ast_funct(name, params, param_count, block);
+}
+
+
+
+
+
+
+AST *parse_statement() {
+  if (match(TOKEN_IF)) return parse_if();
+  if (match(TOKEN_WHILE)) return parse_while();
+  if (match(TOKEN_FOR)) return parse_for();
+  if (match(TOKEN_RETURN)) return parse_return();
+  if (match(TOKEN_IDENTIFIER)) {
+    if (peek(1).type == TOKEN_LPAREN) return parse_function_call();
+    if (peek(1).type == TOKEN_ASSIGN) return parse_assignment();
+  }
+  error("Istruzione non riconosciuta");
+  panic_mode();
+  return NULL;
+}
+
+AST *parse_program() {
+  AST *block = malloc(sizeof(AST));
+  block->tag = TAG_BLOCK;
+
+  block->data.ast_block.statements = NULL;
+  block->data.ast_block.count = 0;
+
+  while (current < tokens.size - 1) {
+    AST *stmt = parse_statement();
+    if (stmt) {
+      add_ast_to_block(block, stmt);
+    }
+  }
+  return block;
+}
+
+
 void print_tree(AST *node, int indent) {
   if (node == NULL) {
     return;
