@@ -167,7 +167,7 @@ AST *new_ast_return(AST *value) {
 }
 
 
-AST *new_ast_declare(AST *name, AST *value) {
+AST *new_ast_declaration(AST *name, AST *value) {
   return new_ast((AST) {
     .tag = TAG_DECLARE,
     .data = {
@@ -398,726 +398,726 @@ void add_ast_to_block(AST_BLOCK *block, AST *node) {
 }
 
 
-size_t find(TokenList tl, TokenType type) {
-  size_t index = -1;
-  for (int i = 0; i < tl.size; i++) {
-    if (tl.tokens[i].type == type) {
-      index = i;
-      break;
-    }
-  }
-  return index;
-}
+// size_t find(TokenList tl, TokenType type) {
+//   size_t index = -1;
+//   for (int i = 0; i < tl.size; i++) {
+//     if (tl.tokens[i].type == type) {
+//       index = i;
+//       break;
+//     }
+//   }
+//   return index;
+// }
 
-size_t find_last(TokenList tl, TokenType type) {
-  size_t index = -1;
-  for (int i = tl.size - 1; i >= 0; i--) {
-    if (tl.tokens[i].type == type) {
-      index = i;
-      break;
-    }
-  }
-  return index;
-}
+// size_t find_last(TokenList tl, TokenType type) {
+//   size_t index = -1;
+//   for (int i = tl.size - 1; i >= 0; i--) {
+//     if (tl.tokens[i].type == type) {
+//       index = i;
+//       break;
+//     }
+//   }
+//   return index;
+// }
 
-TokenList slice(TokenList tl, int start, int elements) {
-  return (TokenList) { .tokens = tl.tokens + start, .size = elements };
-}
+// TokenList slice(TokenList tl, int start, int elements) {
+//   return (TokenList) { .tokens = tl.tokens + start, .size = elements };
+// }
 
-TokenList slice_from_to(TokenList tl, int start, int end) {
-  return slice(tl, start, end - start);
-}
+// TokenList slice_from_to(TokenList tl, int start, int end) {
+//   return slice(tl, start, end - start);
+// }
 
-size_t find_next_comma(TokenList tl, size_t j) {
-  if (j >= tl.size) return -1; // Evita accessi fuori limite
-  TokenList sublist = slice(tl, j + 1, tl.size - (j + 1)); 
-  size_t relative_index = find(sublist, TOKEN_COMMA);
-  return (relative_index != (size_t)-1) ? j + 1 + relative_index : -1;
-}
+// size_t find_next_comma(TokenList tl, size_t j) {
+//   if (j >= tl.size) return -1; // Evita accessi fuori limite
+//   TokenList sublist = slice(tl, j + 1, tl.size - (j + 1)); 
+//   size_t relative_index = find(sublist, TOKEN_COMMA);
+//   return (relative_index != (size_t)-1) ? j + 1 + relative_index : -1;
+// }
 
-int min(int a, int b) {
-  return a < b ? a : b;
-}
+// int min(int a, int b) {
+//   return a < b ? a : b;
+// }
 
-int max(int a, int b) {
-  return a > b ? a : b;
-}
+// int max(int a, int b) {
+//   return a > b ? a : b;
+// }
 
-TokenList extract_tokens(TokenList tl, TokenType open, TokenType close) {
-  size_t start = find(tl, open); // Trova inizio blocco
-  if (start >= tl.size) {
-    fprintf(stderr, "Errore: blocco non trovato\n");
-    return (TokenList){ .tokens = NULL, .size = 0 }; // Nessun blocco trovato
-  }
+// TokenList extract_tokens(TokenList tl, TokenType open, TokenType close) {
+//   size_t start = find(tl, open); // Trova inizio blocco
+//   if (start >= tl.size) {
+//     fprintf(stderr, "Errore: blocco non trovato\n");
+//     return (TokenList){ .tokens = NULL, .size = 0 }; // Nessun blocco trovato
+//   }
 
-  int brace_count = 1; // Conta i blocchi annidati
-  size_t end = start + 1;
+//   int brace_count = 1; // Conta i blocchi annidati
+//   size_t end = start + 1;
 
-  while (end < tl.size && brace_count > 0) {
-    if (tl.tokens[end].type == open) brace_count++;
-    if (tl.tokens[end].type == close) brace_count--;
+//   while (end < tl.size && brace_count > 0) {
+//     if (tl.tokens[end].type == open) brace_count++;
+//     if (tl.tokens[end].type == close) brace_count--;
 
-    end++;
-  }
+//     end++;
+//   }
 
-  if (brace_count != 0) {
-    printf("Blocco non chiuso correttamente\n");
-    return (TokenList){ .tokens = NULL, .size = 0 }; // Blocco non chiuso correttamente
-  }
+//   if (brace_count != 0) {
+//     printf("Blocco non chiuso correttamente\n");
+//     return (TokenList){ .tokens = NULL, .size = 0 }; // Blocco non chiuso correttamente
+//   }
 
-  // Slice tra '{' e '}', escludendo le parentesi
-  return slice(tl, start + 1, (end - start - 2));
-}
+//   // Slice tra '{' e '}', escludendo le parentesi
+//   return slice(tl, start + 1, (end - start - 2));
+// }
 
 
-TokenList extract_block(TokenList tl) {
-  TokenList tokens = extract_tokens(tl, TOKEN_LBRACE, TOKEN_RBRACE);
-  if (tokens.tokens == NULL) {
-    fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
-    print_token_list(tl);
-    exit(1);
-  }
-}
-
-TokenList extract_parentheses(TokenList tl) {
-  TokenList tokens = extract_tokens(tl, TOKEN_LPAREN, TOKEN_RPAREN);
-  if (tokens.tokens == NULL) {
-    fprintf(stderr, "Errore: parentesi ( ) non chiuse correttamente\n");
-    exit(1);
-  }
-}
-
-// TokenList extract_brackets(TokenList tl) {
-//   TokenList tokens = extract_tokens(tl, TOKEN_LBRACKET, TOKEN_RBRACKET);
+// TokenList extract_block(TokenList tl) {
+//   TokenList tokens = extract_tokens(tl, TOKEN_LBRACE, TOKEN_RBRACE);
 //   if (tokens.tokens == NULL) {
-//     fprintf(stderr, "Errore: parentesi quadre [ ] non chiuse correttamente\n");
+//     fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
+//     print_token_list(tl);
 //     exit(1);
 //   }
 // }
 
-int find_block_end(TokenList tl) {
-  size_t start = find(tl, TOKEN_LBRACE); // Trova '{'
-  if (start >= tl.size) return -1; // Nessun blocco trovato
+// TokenList extract_parentheses(TokenList tl) {
+//   TokenList tokens = extract_tokens(tl, TOKEN_LPAREN, TOKEN_RPAREN);
+//   if (tokens.tokens == NULL) {
+//     fprintf(stderr, "Errore: parentesi ( ) non chiuse correttamente\n");
+//     exit(1);
+//   }
+// }
 
-  int brace_count = 1;
-  int end = start + 1;
+// // TokenList extract_brackets(TokenList tl) {
+// //   TokenList tokens = extract_tokens(tl, TOKEN_LBRACKET, TOKEN_RBRACKET);
+// //   if (tokens.tokens == NULL) {
+// //     fprintf(stderr, "Errore: parentesi quadre [ ] non chiuse correttamente\n");
+// //     exit(1);
+// //   }
+// // }
 
-  while (end < tl.size && brace_count > 0) {
-    if (tl.tokens[end].type == TOKEN_LBRACE) brace_count++;
-    if (tl.tokens[end].type == TOKEN_RBRACE) brace_count--;
+// int find_block_end(TokenList tl) {
+//   size_t start = find(tl, TOKEN_LBRACE); // Trova '{'
+//   if (start >= tl.size) return -1; // Nessun blocco trovato
 
-    end++;
-  }
+//   int brace_count = 1;
+//   int end = start + 1;
 
-  if (brace_count != 0) {
-    fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
-    print_token_list(tl);
-    exit(1);
-  }
+//   while (end < tl.size && brace_count > 0) {
+//     if (tl.tokens[end].type == TOKEN_LBRACE) brace_count++;
+//     if (tl.tokens[end].type == TOKEN_RBRACE) brace_count--;
 
-  return end - 1;
-}
+//     end++;
+//   }
 
-AST *function_definition(TokenList tl) {
-  char *name = tl.tokens[1].value.value.sval; // Nome funzione
-  int param_count = 0;
-  char **params = malloc(sizeof(char *) * 20); // Max 20 parametri
+//   if (brace_count != 0) {
+//     fprintf(stderr, "Errore: blocco { } non chiuso correttamente\n");
+//     print_token_list(tl);
+//     exit(1);
+//   }
 
-  // Legge i parametri
-  int i = 3;  // Salta "fun", il nome e (
-  while (tl.tokens[i].type != TOKEN_RPAREN) {
-    if (tl.tokens[i].type == TOKEN_IDENTIFIER) {
-      params[param_count++] = tl.tokens[i].value.value.sval;
-    }
-    i++;
-  }
+//   return end - 1;
+// }
 
-  i++; // Salta il token =>
+// AST *function_definition(TokenList tl) {
+//   char *name = tl.tokens[1].value.value.sval; // Nome funzione
+//   int param_count = 0;
+//   char **params = malloc(sizeof(char *) * 20); // Max 20 parametri
 
-  // Analizza il blocco codice della funzione
-  TokenList body = extract_block(tl);
+//   // Legge i parametri
+//   int i = 3;  // Salta "fun", il nome e (
+//   while (tl.tokens[i].type != TOKEN_RPAREN) {
+//     if (tl.tokens[i].type == TOKEN_IDENTIFIER) {
+//       params[param_count++] = tl.tokens[i].value.value.sval;
+//     }
+//     i++;
+//   }
 
-  AST_BLOCK *block = parse_program(body, false, false);
+//   i++; // Salta il token =>
 
-  // Crea il nodo funzione
-  return new_ast_funct(name, params, param_count, block);
-}
+//   // Analizza il blocco codice della funzione
+//   TokenList body = extract_block(tl);
 
-// Converte una funzione in un metodo di classe
-AST *function_to_method(AST *fun, char *class_name) {
-  return new_ast_method(class_name, fun->data.ast_funct.name, fun->data.ast_funct.params, fun->data.ast_funct.param_count, fun->data.ast_funct.body);
-}
+//   AST_BLOCK *block = parse_program(body, false, false);
 
-/*
-class MyClass {
-  @ field1 = 2;
-  @ field2 = 3;
+//   // Crea il nodo funzione
+//   return new_ast_funct(name, params, param_count, block);
+// }
 
-  fun __init__(a, b) => {
-    this.field1 = a;
-    this.field2 = b;
-  }
-}
+// // Converte una funzione in un metodo di classe
+// AST *function_to_method(AST *fun, char *class_name) {
+//   return new_ast_method(class_name, fun->data.ast_funct.name, fun->data.ast_funct.params, fun->data.ast_funct.param_count, fun->data.ast_funct.body);
+// }
 
-*/
-AST *class_definition(TokenList tl) {
-  char *class_name = tl.tokens[1].value.value.sval; // Nome classe
+// /*
+// class MyClass {
+//   @ field1 = 2;
+//   @ field2 = 3;
 
-  int field_count = 0;
-  AST **fields = malloc(sizeof(AST *) * 50); // Max 50 fields
+//   fun __init__(a, b) => {
+//     this.field1 = a;
+//     this.field2 = b;
+//   }
+// }
 
-  int method_count = 0;
-  AST **methods = malloc(sizeof(AST *) * 50); // Max 50 methods
+// */
+// AST *class_definition(TokenList tl) {
+//   char *class_name = tl.tokens[1].value.value.sval; // Nome classe
+
+//   int field_count = 0;
+//   AST **fields = malloc(sizeof(AST *) * 50); // Max 50 fields
+
+//   int method_count = 0;
+//   AST **methods = malloc(sizeof(AST *) * 50); // Max 50 methods
   
-  int paren_depth = 0;
-  for (int i = 0; i < tl.size; i++) {
-    if (tl.tokens[i].type == TOKEN_LPAREN) paren_depth++;
-    if (tl.tokens[i].type == TOKEN_RPAREN) paren_depth--;
+//   int paren_depth = 0;
+//   for (int i = 0; i < tl.size; i++) {
+//     if (tl.tokens[i].type == TOKEN_LPAREN) paren_depth++;
+//     if (tl.tokens[i].type == TOKEN_RPAREN) paren_depth--;
     
-    if (paren_depth == 0) {
-      if (tl.tokens[i].type == TOKEN_DECLARE && tl.tokens[i+1].type == TOKEN_IDENTIFIER && tl.tokens[i+2].type == TOKEN_EOL) {
-        fields[field_count++] = new_ast_field(tl.tokens[i+1].value.value.sval);
-      }
-    }
-  }
+//     if (paren_depth == 0) {
+//       if (tl.tokens[i].type == TOKEN_DECLARE && tl.tokens[i+1].type == TOKEN_IDENTIFIER && tl.tokens[i+2].type == TOKEN_EOL) {
+//         fields[field_count++] = new_ast_field(tl.tokens[i+1].value.value.sval);
+//       }
+//     }
+//   }
   
-  AST_BLOCK *methods_block = define_all_functions(tl, 1);
+//   AST_BLOCK *methods_block = define_all_functions(tl, 1);
 
-  for (int i = 0; i < methods_block->count; i++) {
-    AST *node = methods_block->statements[i];
-    methods[method_count++] = function_to_method(node, class_name);
-  }
+//   for (int i = 0; i < methods_block->count; i++) {
+//     AST *node = methods_block->statements[i];
+//     methods[method_count++] = function_to_method(node, class_name);
+//   }
 
-  return new_ast_class(class_name, fields, field_count, methods, method_count);
-}
+//   return new_ast_class(class_name, fields, field_count, methods, method_count);
+// }
 
-bool ends_with(const char *str, const char *suffix) {
-  size_t str_len = strlen(str);
-  size_t suffix_len = strlen(suffix);
+// bool ends_with(const char *str, const char *suffix) {
+//   size_t str_len = strlen(str);
+//   size_t suffix_len = strlen(suffix);
 
-  if (suffix_len > str_len) {
-    return false;
-  }
+//   if (suffix_len > str_len) {
+//     return false;
+//   }
 
-  return strcmp(str + (str_len - suffix_len), suffix) == 0;
-}
+//   return strcmp(str + (str_len - suffix_len), suffix) == 0;
+// }
 
-AST *generate_tree(TokenList tl) {
-  Variable *symbol_table = NULL;
-  if (tl.size == 0 || tl.tokens == NULL) { return NULL; }
+// AST *generate_tree(TokenList tl) {
+//   Variable *symbol_table = NULL;
+//   if (tl.size == 0 || tl.tokens == NULL) { return NULL; }
 
-  AST *left, *right;  // Dichiarazioni per eventuali operatori binari
-  VarType t1, t2;  // Used for type deduction
+//   AST *left, *right;  // Dichiarazioni per eventuali operatori binari
+//   VarType t1, t2;  // Used for type deduction
 
-  /*
-  while (i < 10) {
-    Code
-  }
-  */
-  if (tl.tokens[0].type == TOKEN_WHILE) {
-    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
-    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
+//   /*
+//   while (i < 10) {
+//     Code
+//   }
+//   */
+//   if (tl.tokens[0].type == TOKEN_WHILE) {
+//     TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
+//     TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
 
-    return new_ast_while(generate_tree(condition), parse_program(body, false, false));
-  }
+//     return new_ast_while(generate_tree(condition), parse_program(body, false, false));
+//   }
 
-  /*
-  for (@i = 0 to 10 step 1) {
-    Code
-  }
-  */
-  if (tl.tokens[0].type == TOKEN_FOR) {
-    TokenList header = extract_parentheses(tl);
-    TokenList body = extract_block(tl);
+//   /*
+//   for (@i = 0 to 10 step 1) {
+//     Code
+//   }
+//   */
+//   if (tl.tokens[0].type == TOKEN_FOR) {
+//     TokenList header = extract_parentheses(tl);
+//     TokenList body = extract_block(tl);
 
-    // printf("Header: \n");
-    // print_token_list(header);
+//     // printf("Header: \n");
+//     // print_token_list(header);
 
-    TokenList init = slice_from_to(header, 0, find(header, TOKEN_TO));
-    TokenList to = slice_from_to(header, find(header, TOKEN_TO) + 1, find(header, TOKEN_STEP));
-    TokenList step = slice_from_to(header, find(header, TOKEN_STEP) + 1, header.size);
+//     TokenList init = slice_from_to(header, 0, find(header, TOKEN_TO));
+//     TokenList to = slice_from_to(header, find(header, TOKEN_TO) + 1, find(header, TOKEN_STEP));
+//     TokenList step = slice_from_to(header, find(header, TOKEN_STEP) + 1, header.size);
 
-    // printf("Init: \n");
-    // print_token_list(init);
-    // printf("To: \n");
-    // print_token_list(to);
-    // printf("Step: \n");
-    // print_token_list(step);
-    // printf("Body: \n");
-    // print_token_list(body);
+//     // printf("Init: \n");
+//     // print_token_list(init);
+//     // printf("To: \n");
+//     // print_token_list(to);
+//     // printf("Step: \n");
+//     // print_token_list(step);
+//     // printf("Body: \n");
+//     // print_token_list(body);
 
-    AST *init_ast = generate_tree(init);     // Declare or assign
-    AST *to_value_ast = generate_tree(to);   // End value (int or float)
-    AST *step_ast = generate_tree(step);     // Step value (int or float)
-    TokenType condition_type = -1;
+//     AST *init_ast = generate_tree(init);     // Declare or assign
+//     AST *to_value_ast = generate_tree(to);   // End value (int or float)
+//     AST *step_ast = generate_tree(step);     // Step value (int or float)
+//     TokenType condition_type = -1;
 
-    AST *start_value_ast = NULL;
+//     AST *start_value_ast = NULL;
 
-    if (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN) {
-      printf("Errore: inizializzazione del ciclo for non valida\n");
-      exit(1);
-    }
+//     if (init_ast->tag != TAG_DECLARE && init_ast->tag != TAG_ASSIGN) {
+//       printf("Errore: inizializzazione del ciclo for non valida\n");
+//       exit(1);
+//     }
 
-    if (init_ast->tag == TAG_DECLARE) {
-      VarType type = init_ast->data.ast_declare.type;
-      char *name = init_ast->data.ast_declare.name;
-      start_value_ast = new_ast_var(name);
-    } else if (init_ast->tag == TAG_ASSIGN) {
-      char *name = init_ast->data.ast_assign.name;
-      start_value_ast = new_ast_var(name);
-    } else {
-      printf("Errore: inizializzazione del ciclo for non valida\n");
-      exit(1);
-    }
+//     if (init_ast->tag == TAG_DECLARE) {
+//       VarType type = init_ast->data.ast_declare.type;
+//       char *name = init_ast->data.ast_declare.name;
+//       start_value_ast = new_ast_var(name);
+//     } else if (init_ast->tag == TAG_ASSIGN) {
+//       char *name = init_ast->data.ast_assign.name;
+//       start_value_ast = new_ast_var(name);
+//     } else {
+//       printf("Errore: inizializzazione del ciclo for non valida\n");
+//       exit(1);
+//     }
 
-    float step_value = 1;
-    if (step_ast->tag == TAG_INT) {
-      step_value = step_ast->data.ast_int.number;
-    } else if (step_ast->tag == TAG_FLOAT) {
-      step_value = step_ast->data.ast_float.number;
-    }
+//     float step_value = 1;
+//     if (step_ast->tag == TAG_INT) {
+//       step_value = step_ast->data.ast_int.number;
+//     } else if (step_ast->tag == TAG_FLOAT) {
+//       step_value = step_ast->data.ast_float.number;
+//     }
 
-    if (step_value < 0) {
-      condition_type = TOKEN_GREATER_EQUALS;
-    } else {
-      condition_type = TOKEN_LESS;
-    }
+//     if (step_value < 0) {
+//       condition_type = TOKEN_GREATER_EQUALS;
+//     } else {
+//       condition_type = TOKEN_LESS;
+//     }
 
-    AST *condition_ast = new_ast_condition(start_value_ast, to_value_ast, condition_type);
+//     AST *condition_ast = new_ast_condition(start_value_ast, to_value_ast, condition_type);
 
-    AST_BLOCK *body_ast = parse_program(body, false, false);
-    if (body_ast->count == 0) {
-      printf("Warning: empty for loop\n");
-    }
+//     AST_BLOCK *body_ast = parse_program(body, false, false);
+//     if (body_ast->count == 0) {
+//       printf("Warning: empty for loop\n");
+//     }
 
-    return new_ast_for(init_ast, condition_ast, step_ast, body_ast);
-  }
+//     return new_ast_for(init_ast, condition_ast, step_ast, body_ast);
+//   }
 
-  /*
-  if (i == 10) {
-    Code
-  }
-  */
-  if (tl.tokens[0].type == TOKEN_IF) {
-    TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
-    TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
+//   /*
+//   if (i == 10) {
+//     Code
+//   }
+//   */
+//   if (tl.tokens[0].type == TOKEN_IF) {
+//     TokenList condition = extract_parentheses(tl);  // Isola il blocco di codice tra parentesi
+//     TokenList body = extract_block(tl);  // Isola il blocco di codice tra parentesi graffe
 
-    return new_ast_if(generate_tree(condition), parse_program(body, false, false));
-  }
+//     return new_ast_if(generate_tree(condition), parse_program(body, false, false));
+//   }
 
-  /* <- value; */
-  if (tl.tokens[0].type == TOKEN_RETURN) {
-    // Considera i token successivi come espressione di ritorno
-    TokenList return_expr = { .tokens = tl.tokens + 1, .size = tl.size - 1 };
-    AST *value = generate_tree(return_expr);  // Genera l'espressione che viene restituita
-    return new_ast_return(value);  // Crea il nodo return
-  }
+//   /* <- value; */
+//   if (tl.tokens[0].type == TOKEN_RETURN) {
+//     // Considera i token successivi come espressione di ritorno
+//     TokenList return_expr = { .tokens = tl.tokens + 1, .size = tl.size - 1 };
+//     AST *value = generate_tree(return_expr);  // Genera l'espressione che viene restituita
+//     return new_ast_return(value);  // Crea il nodo return
+//   }
 
-  // Gestisce le chiamate a funzione
-  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_LPAREN) {
-    char *name = tl.tokens[0].value.value.sval;
-    int arg_count = 0;
-    AST **args = malloc(sizeof(AST *) * 20);
+//   // Gestisce le chiamate a funzione
+//   if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_LPAREN) {
+//     char *name = tl.tokens[0].value.value.sval;
+//     int arg_count = 0;
+//     AST **args = malloc(sizeof(AST *) * 20);
 
-    //TokenList args_tl = extract_parentheses(tl);
-    TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
+//     //TokenList args_tl = extract_parentheses(tl);
+//     TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
 
-    // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
-    int paren_depth = 0;
-    for (int j = 0; j < args_tl.size; j++) {
-      if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
-      if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
+//     // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
+//     int paren_depth = 0;
+//     for (int j = 0; j < args_tl.size; j++) {
+//       if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
+//       if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
 
-      if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
-        args[arg_count++] = generate_tree(slice(args_tl, 0, j));
-        args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
-        j = 0;
-      }
-    }
+//       if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
+//         args[arg_count++] = generate_tree(slice(args_tl, 0, j));
+//         args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
+//         j = 0;
+//       }
+//     }
 
-    // Aggiunge l'ultimo argomento
-    if (args_tl.size > 0) {
-      args[arg_count++] = generate_tree(args_tl);
-    }
-    return new_ast_call(name, args, arg_count);
-  }
-
-
-  //! ATTENZIONE: questa è una semplificazione di una chiamata ad un metodo e va sostituita da una analisi sintattica più avanzata
-  // Gestisce le chiamate a metodi
-  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER && tl.tokens[3].type == TOKEN_LPAREN) {
-    char *class_name = tl.tokens[0].value.value.sval;
-    char *method_name = tl.tokens[2].value.value.sval;
-    int arg_count = 0;
-    AST **args = malloc(sizeof(AST *) * 20);
-
-    TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
-
-    // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
-    int paren_depth = 0;
-    for (int j = 0; j < args_tl.size; j++) {
-      if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
-      if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
-
-      if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
-        args[arg_count++] = generate_tree(slice(args_tl, 0, j));
-        args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
-        j = 0;
-      }
-    }
-
-    // Aggiunge l'ultimo argomento
-    if (args_tl.size > 0) {
-      args[arg_count++] = generate_tree(args_tl);
-    }
-
-    return new_ast_call_method(class_name, method_name, args, arg_count);
-  }
+//     // Aggiunge l'ultimo argomento
+//     if (args_tl.size > 0) {
+//       args[arg_count++] = generate_tree(args_tl);
+//     }
+//     return new_ast_call(name, args, arg_count);
+//   }
 
 
-  // Fields
-  for (int i = 0; i < tl.size; i++) {
-    if (tl.tokens[i].type == TOKEN_DECLARE) {
-      if (tl.tokens[i+1].type != TOKEN_IDENTIFIER) {
-        printf("Errore: campo non valido\n");
-        exit(1);
-      }
-      if (tl.tokens[i+2].type == TOKEN_EOL) {
-        char *name = tl.tokens[i+1].value.value.sval;
-        return new_ast_field(name);
-      }
-    }
-  }
+//   //! ATTENZIONE: questa è una semplificazione di una chiamata ad un metodo e va sostituita da una analisi sintattica più avanzata
+//   // Gestisce le chiamate a metodi
+//   if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER && tl.tokens[3].type == TOKEN_LPAREN) {
+//     char *class_name = tl.tokens[0].value.value.sval;
+//     char *method_name = tl.tokens[2].value.value.sval;
+//     int arg_count = 0;
+//     AST **args = malloc(sizeof(AST *) * 20);
+
+//     TokenList args_tl = extract_parentheses(slice(tl, 1, tl.size - 1));
+
+//     // Cerca le virgole tenendo in considerazione la profondità della chiamata in modo da ignorare quelle delle chiamate annidate
+//     int paren_depth = 0;
+//     for (int j = 0; j < args_tl.size; j++) {
+//       if (args_tl.tokens[j].type == TOKEN_LPAREN) paren_depth++;
+//       if (args_tl.tokens[j].type == TOKEN_RPAREN) paren_depth--;
+
+//       if (paren_depth == 0 && args_tl.tokens[j].type == TOKEN_COMMA) {
+//         args[arg_count++] = generate_tree(slice(args_tl, 0, j));
+//         args_tl = slice(args_tl, j + 1, args_tl.size - (j + 1));
+//         j = 0;
+//       }
+//     }
+
+//     // Aggiunge l'ultimo argomento
+//     if (args_tl.size > 0) {
+//       args[arg_count++] = generate_tree(args_tl);
+//     }
+
+//     return new_ast_call_method(class_name, method_name, args, arg_count);
+//   }
+
+
+//   // Fields
+//   for (int i = 0; i < tl.size; i++) {
+//     if (tl.tokens[i].type == TOKEN_DECLARE) {
+//       if (tl.tokens[i+1].type != TOKEN_IDENTIFIER) {
+//         printf("Errore: campo non valido\n");
+//         exit(1);
+//       }
+//       if (tl.tokens[i+2].type == TOKEN_EOL) {
+//         char *name = tl.tokens[i+1].value.value.sval;
+//         return new_ast_field(name);
+//       }
+//     }
+//   }
   
-  for (int i = 0; i < tl.size; i++) {
-    Token *token = &tl.tokens[i];
+//   for (int i = 0; i < tl.size; i++) {
+//     Token *token = &tl.tokens[i];
 
-    if (token->type == TOKEN_ASSIGN) {  // Operatore =
-      TokenList right_sublist = { .tokens = &tl.tokens[i + 1], .size = tl.size - (i + 1) };
-      TokenList left_sublist = (TokenList) {tl.tokens, i};
+//     if (token->type == TOKEN_ASSIGN) {  // Operatore =
+//       TokenList right_sublist = { .tokens = &tl.tokens[i + 1], .size = tl.size - (i + 1) };
+//       TokenList left_sublist = (TokenList) {tl.tokens, i};
 
-      if (tl.tokens[i-2].type == TOKEN_DECLARE) {
-        // printf("declare\n");
-        // printf("\tleft:\n\t\t");
-        // print_token_list(left_sublist);
-        // print_tree(generate_tree(left_sublist), 0);
-        // printf("\tright:\n\t\t");
-        // print_tree(generate_tree(right_sublist), 0);
+//       if (tl.tokens[i-2].type == TOKEN_DECLARE) {
+//         // printf("declare\n");
+//         // printf("\tleft:\n\t\t");
+//         // print_token_list(left_sublist);
+//         // print_tree(generate_tree(left_sublist), 0);
+//         // printf("\tright:\n\t\t");
+//         // print_tree(generate_tree(right_sublist), 0);
 
-        left_sublist = (TokenList) {tl.tokens + i - 1, 1};  // Parsa soltanto il primo elemento a sinistra
-        return new_ast_declare(generate_tree(left_sublist), generate_tree(right_sublist));
-      } else {
-        // printf("assign\n");
-        // printf("\tleft:\n\t\t");
-        // print_tree(generate_tree(left_sublist), 0);
-        // printf("\tright:\n\t\t");
-        // print_tree(generate_tree(right_sublist), 0);
-        return new_ast_assign(generate_tree(left_sublist), generate_tree(right_sublist));
-      }
-    }
+//         left_sublist = (TokenList) {tl.tokens + i - 1, 1};  // Parsa soltanto il primo elemento a sinistra
+//         return new_ast_declaration(generate_tree(left_sublist), generate_tree(right_sublist));
+//       } else {
+//         // printf("assign\n");
+//         // printf("\tleft:\n\t\t");
+//         // print_tree(generate_tree(left_sublist), 0);
+//         // printf("\tright:\n\t\t");
+//         // print_tree(generate_tree(right_sublist), 0);
+//         return new_ast_assign(generate_tree(left_sublist), generate_tree(right_sublist));
+//       }
+//     }
 
-    // Gestisce tutte le condizioni binarie
-    if (token->type == TOKEN_EQUALS || 
-        token->type == TOKEN_NOT_EQUALS || 
-        token->type == TOKEN_LESS_EQUALS || 
-        token->type == TOKEN_GREATER_EQUALS || 
-        token->type == TOKEN_LESS || 
-        token->type == TOKEN_GREATER) {
-      TokenList operand1 = slice(tl, 0, i);
-      TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
+//     // Gestisce tutte le condizioni binarie
+//     if (token->type == TOKEN_EQUALS || 
+//         token->type == TOKEN_NOT_EQUALS || 
+//         token->type == TOKEN_LESS_EQUALS || 
+//         token->type == TOKEN_GREATER_EQUALS || 
+//         token->type == TOKEN_LESS || 
+//         token->type == TOKEN_GREATER) {
+//       TokenList operand1 = slice(tl, 0, i);
+//       TokenList operand2 = slice(tl, i + 1, tl.size - (i + 1));
 
-      return new_ast_condition(generate_tree(operand1), generate_tree(operand2), tl.tokens[i].type);
-    }
-  }
+//       return new_ast_condition(generate_tree(operand1), generate_tree(operand2), tl.tokens[i].type);
+//     }
+//   }
 
-  // Parsing delle espressioni aritmetiche
-  for (int i = 0; i < tl.size; i++) {  // Operatori {+, -}
-    TokenList tl_left = (TokenList) {tl.tokens, i};
-    TokenList tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
+//   // Parsing delle espressioni aritmetiche
+//   for (int i = 0; i < tl.size; i++) {  // Operatori {+, -}
+//     TokenList tl_left = (TokenList) {tl.tokens, i};
+//     TokenList tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
 
-    switch (tl.tokens[i].type) {
-      case TOKEN_SUM:
-        left = generate_tree(tl_left); // Prende i token fino all'operatore
-        right = generate_tree(tl_right); // Token dopo l'operatore
+//     switch (tl.tokens[i].type) {
+//       case TOKEN_SUM:
+//         left = generate_tree(tl_left); // Prende i token fino all'operatore
+//         right = generate_tree(tl_right); // Token dopo l'operatore
         
-        return new_ast_add(left, right);
-      break;
-      case TOKEN_SUB:
-        left = generate_tree(tl_left); // Prende i token fino all'operatore
-        right = generate_tree(tl_right); // Token dopo l'operatore
+//         return new_ast_add(left, right);
+//       break;
+//       case TOKEN_SUB:
+//         left = generate_tree(tl_left); // Prende i token fino all'operatore
+//         right = generate_tree(tl_right); // Token dopo l'operatore
 
-        return new_ast_sub(left, right);
-      break;
-    }
-  }
+//         return new_ast_sub(left, right);
+//       break;
+//     }
+//   }
   
-  for (int i = 0; i < tl.size; i++) {  // Operatori {*, /, %}
-    TokenList tl_left = (TokenList) {tl.tokens, i};
-    TokenList tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
+//   for (int i = 0; i < tl.size; i++) {  // Operatori {*, /, %}
+//     TokenList tl_left = (TokenList) {tl.tokens, i};
+//     TokenList tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
 
-    switch (tl.tokens[i].type) {
-      case TOKEN_MUL:
-        left = generate_tree(tl_left); // Prende i token fino all'operatore
-        right = generate_tree(tl_right); // Token dopo l'operatore
+//     switch (tl.tokens[i].type) {
+//       case TOKEN_MUL:
+//         left = generate_tree(tl_left); // Prende i token fino all'operatore
+//         right = generate_tree(tl_right); // Token dopo l'operatore
         
-        return new_ast_mul(left, right);
-      break;
-      case TOKEN_DIV:
-        left = generate_tree(tl_left); // Prende i token fino all'operatore
-        right = generate_tree(tl_right); // Token dopo l'operatore
+//         return new_ast_mul(left, right);
+//       break;
+//       case TOKEN_DIV:
+//         left = generate_tree(tl_left); // Prende i token fino all'operatore
+//         right = generate_tree(tl_right); // Token dopo l'operatore
         
-        return new_ast_div(left, right);
-      case TOKEN_PERCENT:
-        left = generate_tree(tl_left); // Prende i token fino all'operatore
-        right = generate_tree(tl_right); // Token dopo l'operatore
+//         return new_ast_div(left, right);
+//       case TOKEN_PERCENT:
+//         left = generate_tree(tl_left); // Prende i token fino all'operatore
+//         right = generate_tree(tl_right); // Token dopo l'operatore
         
-        return new_ast_mod(left, right);
-      break;
-    }
-  }
+//         return new_ast_mod(left, right);
+//       break;
+//     }
+//   }
 
-  if (tl.tokens[0].type == TOKEN_FLOAT) {
-    return new_ast_float(tl.tokens[0].value.value.fval);
-  }
+//   if (tl.tokens[0].type == TOKEN_FLOAT) {
+//     return new_ast_float(tl.tokens[0].value.value.fval);
+//   }
 
-  if (tl.tokens[0].type == TOKEN_INTEGER) {
-    return new_ast_int64(tl.tokens[0].value.value.i32val);
-  }
+//   if (tl.tokens[0].type == TOKEN_INTEGER) {
+//     return new_ast_int64(tl.tokens[0].value.value.i32val);
+//   }
 
-  // TODO: gestire chiamate ai metodi di classe tramite '.'
-  if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER) {
-    // TODO: gestire accessi a field "annidati" tipo name.field1.field2
-    return new_ast_field_access(tl.tokens[0].value.value.sval, tl.tokens[2].value.value.sval);
-  }
+//   // TODO: gestire chiamate ai metodi di classe tramite '.'
+//   if (tl.tokens[0].type == TOKEN_IDENTIFIER && tl.tokens[1].type == TOKEN_DOT && tl.tokens[2].type == TOKEN_IDENTIFIER) {
+//     // TODO: gestire accessi a field "annidati" tipo name.field1.field2
+//     return new_ast_field_access(tl.tokens[0].value.value.sval, tl.tokens[2].value.value.sval);
+//   }
 
-  if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
-    return new_ast_var(tl.tokens[0].value.value.sval);
-  }
+//   if (tl.tokens[0].type == TOKEN_IDENTIFIER) {
+//     return new_ast_var(tl.tokens[0].value.value.sval);
+//   }
 
-  if (tl.tokens[0].type == TOKEN_STRING) {
-    return new_ast_string(tl.tokens[0].value.value.sval);
-  }
+//   if (tl.tokens[0].type == TOKEN_STRING) {
+//     return new_ast_string(tl.tokens[0].value.value.sval);
+//   }
 
-  return NULL;
-}
+//   return NULL;
+// }
 
-AST_BLOCK *concat_ast_blocks(AST_BLOCK *block1, AST_BLOCK *block2) {
-  if (!block1) return block2;
-  if (!block2) return block1;
+// AST_BLOCK *concat_ast_blocks(AST_BLOCK *block1, AST_BLOCK *block2) {
+//   if (!block1) return block2;
+//   if (!block2) return block1;
 
-  int new_count = block1->count + block2->count;
-  AST **new_statements = malloc(sizeof(AST *) * new_count);
+//   int new_count = block1->count + block2->count;
+//   AST **new_statements = malloc(sizeof(AST *) * new_count);
 
-  // Copia le istruzioni del primo blocco
-  for (int i = 0; i < block1->count; i++) {
-    new_statements[i] = block1->statements[i];
-  }
+//   // Copia le istruzioni del primo blocco
+//   for (int i = 0; i < block1->count; i++) {
+//     new_statements[i] = block1->statements[i];
+//   }
 
-  // Copia le istruzioni del secondo blocco
-  for (int i = 0; i < block2->count; i++) {
-    new_statements[block1->count + i] = block2->statements[i];
-  }
+//   // Copia le istruzioni del secondo blocco
+//   for (int i = 0; i < block2->count; i++) {
+//     new_statements[block1->count + i] = block2->statements[i];
+//   }
 
-  // Alloca il nuovo blocco
-  AST_BLOCK *new_block = malloc(sizeof(AST_BLOCK));
-  new_block->statements = new_statements;
-  new_block->count = new_count;
+//   // Alloca il nuovo blocco
+//   AST_BLOCK *new_block = malloc(sizeof(AST_BLOCK));
+//   new_block->statements = new_statements;
+//   new_block->count = new_count;
 
-  // Libera le strutture originali (ma non i nodi AST)
-  free(block1->statements);
-  free(block2->statements);
-  free(block1);
-  free(block2);
+//   // Libera le strutture originali (ma non i nodi AST)
+//   free(block1->statements);
+//   free(block2->statements);
+//   free(block1);
+//   free(block2);
 
-  return new_block;
-}
+//   return new_block;
+// }
 
-AST_BLOCK *define_all_functions(TokenList tl, int depth) {
-  AST_BLOCK *functions = malloc(sizeof(AST_BLOCK));
-  if (!functions) {
-    fprintf(stderr, "Errore nell'allocazione della memoria per functions.\n");
-    exit(1);
-  }
-  functions->statements = NULL;  // Inizializzazione della lista vuota
-  functions->count = 0;
+// AST_BLOCK *define_all_functions(TokenList tl, int depth) {
+//   AST_BLOCK *functions = malloc(sizeof(AST_BLOCK));
+//   if (!functions) {
+//     fprintf(stderr, "Errore nell'allocazione della memoria per functions.\n");
+//     exit(1);
+//   }
+//   functions->statements = NULL;  // Inizializzazione della lista vuota
+//   functions->count = 0;
 
-  int fun_index, block_end = -1;
-  int function_depth = 0;
-  int start_index = 0;
+//   int fun_index, block_end = -1;
+//   int function_depth = 0;
+//   int start_index = 0;
 
-  do {
-    // Cerca i token 'fun' a profondità N per evitare i metodi di classe
-    fun_index = -1;
-    for (int i = start_index; i < tl.size; i++) {
-      if (tl.tokens[i].type == TOKEN_LBRACE) function_depth++;
-      if (tl.tokens[i].type == TOKEN_RBRACE) function_depth--;
+//   do {
+//     // Cerca i token 'fun' a profondità N per evitare i metodi di classe
+//     fun_index = -1;
+//     for (int i = start_index; i < tl.size; i++) {
+//       if (tl.tokens[i].type == TOKEN_LBRACE) function_depth++;
+//       if (tl.tokens[i].type == TOKEN_RBRACE) function_depth--;
 
-      if (tl.tokens[i].type == TOKEN_FUN && function_depth <= depth) {
-        fun_index = i;
-        break;
-      }
-    }
+//       if (tl.tokens[i].type == TOKEN_FUN && function_depth <= depth) {
+//         fun_index = i;
+//         break;
+//       }
+//     }
 
-    if (fun_index == -1) break;
+//     if (fun_index == -1) break;
 
-    block_end = fun_index + find_block_end(slice(tl, fun_index, tl.size - fun_index));  // Cerca la } di chiusura
+//     block_end = fun_index + find_block_end(slice(tl, fun_index, tl.size - fun_index));  // Cerca la } di chiusura
 
-    // printf("FUN token: %d\n", fun_index);
-    // printf("RBRACE token: %d\n\n", block_end);
+//     // printf("FUN token: %d\n", fun_index);
+//     // printf("RBRACE token: %d\n\n", block_end);
 
-    if (block_end == -1) {
-      fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
-      exit(1);
-    }
+//     if (block_end == -1) {
+//       fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
+//       exit(1);
+//     }
     
-    TokenList sublist = slice_from_to(tl, fun_index, block_end + 1);
+//     TokenList sublist = slice_from_to(tl, fun_index, block_end + 1);
 
-    AST *function = function_definition(sublist);
+//     AST *function = function_definition(sublist);
 
-    // Aggiunge la funzione al blocco funzioni
-    add_ast_to_block(functions, function);
-    start_index = block_end + 1;
-  } while (fun_index != -1);
+//     // Aggiunge la funzione al blocco funzioni
+//     add_ast_to_block(functions, function);
+//     start_index = block_end + 1;
+//   } while (fun_index != -1);
 
-  return functions;
-}
+//   return functions;
+// }
 
-AST_BLOCK *parse_classes(TokenList tl) {
-  int class_index = -1, block_end = -1;
-  AST_BLOCK *classes = malloc(sizeof(AST_BLOCK));
-  if (!classes) {
-    fprintf(stderr, "Errore nell'allocazione della memoria per classes.\n");
-    exit(1);
-  }
-  classes->statements = NULL;  // Inizializzazione della lista vuota
-  classes->count = 0;
+// AST_BLOCK *parse_classes(TokenList tl) {
+//   int class_index = -1, block_end = -1;
+//   AST_BLOCK *classes = malloc(sizeof(AST_BLOCK));
+//   if (!classes) {
+//     fprintf(stderr, "Errore nell'allocazione della memoria per classes.\n");
+//     exit(1);
+//   }
+//   classes->statements = NULL;  // Inizializzazione della lista vuota
+//   classes->count = 0;
 
-  do {
-    class_index = find(tl, TOKEN_CLASS);    // Inizio della definizione di classe
-    if (class_index == -1) break;
+//   do {
+//     class_index = find(tl, TOKEN_CLASS);    // Inizio della definizione di classe
+//     if (class_index == -1) break;
 
-    TokenList sublist = slice(tl, class_index, tl.size - class_index);  // Taglia da 'class' alla fine
-    block_end = find_block_end(sublist);  // Cerca la } di chiusura
+//     TokenList sublist = slice(tl, class_index, tl.size - class_index);  // Taglia da 'class' alla fine
+//     block_end = find_block_end(sublist);  // Cerca la } di chiusura
 
-    if (block_end == -1) {
-      fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
-      exit(1);
-    }
+//     if (block_end == -1) {
+//       fprintf(stderr, "Errore: parentesi graffa di chiusura non trovata.\n");
+//       exit(1);
+//     }
 
-    sublist = slice_from_to(sublist, 0, block_end + 1);
+//     sublist = slice_from_to(sublist, 0, block_end + 1);
     
-    AST *class = class_definition(sublist);
+//     AST *class = class_definition(sublist);
 
-    // Aggiunge la classe al blocco classes
-    add_ast_to_block(classes, class);
-    tl.tokens = &tl.tokens[block_end + 1];
-    tl.size -= (block_end + 1);
-  } while (class_index != -1);
+//     // Aggiunge la classe al blocco classes
+//     add_ast_to_block(classes, class);
+//     tl.tokens = &tl.tokens[block_end + 1];
+//     tl.size -= (block_end + 1);
+//   } while (class_index != -1);
 
-  return classes;
-}
+//   return classes;
+// }
 
-SYMBOL_TABLE *find_symbols(TokenList tl) {
-  SYMBOL_TABLE *symbol_table = malloc(sizeof(SYMBOL_TABLE));
-  int symbols = 0;
+// SYMBOL_TABLE *find_symbols(TokenList tl) {
+//   SYMBOL_TABLE *symbol_table = malloc(sizeof(SYMBOL_TABLE));
+//   int symbols = 0;
 
-  for (int i = 0; i < tl.size; i++) {
-    if (tl.tokens[i].type == TOKEN_DECLARE) {
-      if (symbols == 0) {
-        symbol_table->vars = malloc(sizeof(Variable));
-      } else {
-        symbol_table->vars = realloc(symbol_table->vars, sizeof(Variable) * (symbols+1));
-      }
+//   for (int i = 0; i < tl.size; i++) {
+//     if (tl.tokens[i].type == TOKEN_DECLARE) {
+//       if (symbols == 0) {
+//         symbol_table->vars = malloc(sizeof(Variable));
+//       } else {
+//         symbol_table->vars = realloc(symbol_table->vars, sizeof(Variable) * (symbols+1));
+//       }
 
-      symbol_table->vars[symbols].name = tl.tokens[i+1].value.value.sval;
-      symbol_table->vars[symbols].type = INT;
-      symbol_table->vars[symbols].value = NONE_VAL;
+//       symbol_table->vars[symbols].name = tl.tokens[i+1].value.value.sval;
+//       symbol_table->vars[symbols].type = INT;
+//       symbol_table->vars[symbols].value = NONE_VAL;
       
-      symbols++;
-    }
-  }
+//       symbols++;
+//     }
+//   }
 
-  symbol_table->count = symbols;
-  return symbol_table;
-}
+//   symbol_table->count = symbols;
+//   return symbol_table;
+// }
 
-AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool _parse_classes) {
-  // Inizializza il blocco principale del programma
-  AST_BLOCK *block = malloc(sizeof(AST_BLOCK));
-  if (!block) {
-    fprintf(stderr, "Errore nell'allocazione della memoria per AST_BLOCK\n");
-    exit(1);
-  }
-  block->statements = NULL;
-  block->count = 0;
+// AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool _parse_classes) {
+//   // Inizializza il blocco principale del programma
+//   AST_BLOCK *block = malloc(sizeof(AST_BLOCK));
+//   if (!block) {
+//     fprintf(stderr, "Errore nell'allocazione della memoria per AST_BLOCK\n");
+//     exit(1);
+//   }
+//   block->statements = NULL;
+//   block->count = 0;
 
-  // Preprocessing
-  if (tl.tokens[0].type == TOKEN_IMPORT) {
-    char *filename = tl.tokens[1].value.value.sval;
+//   // Preprocessing
+//   if (tl.tokens[0].type == TOKEN_IMPORT) {
+//     char *filename = tl.tokens[1].value.value.sval;
 
-    if (!ends_with(filename, ".h") && !ends_with(filename, ".c")) {
-      fprintf(stderr, "Errore: il file da importare deve avere estensione .c o .h\n");
-      exit(1);
-    }
-    AST *import = new_ast_system_import(filename);
-    add_ast_to_block(block, import);
-  }
+//     if (!ends_with(filename, ".h") && !ends_with(filename, ".c")) {
+//       fprintf(stderr, "Errore: il file da importare deve avere estensione .c o .h\n");
+//       exit(1);
+//     }
+//     AST *import = new_ast_system_import(filename);
+//     add_ast_to_block(block, import);
+//   }
 
-  // Aggiunge tutte le funzioni definite all'inizio del programma
-  if (_parse_classes || parse_functions) {
-    if (parse_functions) {
-      AST_BLOCK *functions = define_all_functions(tl, 0);
-      block = concat_ast_blocks(block, functions);
-    }
+//   // Aggiunge tutte le funzioni definite all'inizio del programma
+//   if (_parse_classes || parse_functions) {
+//     if (parse_functions) {
+//       AST_BLOCK *functions = define_all_functions(tl, 0);
+//       block = concat_ast_blocks(block, functions);
+//     }
 
-    if (_parse_classes) {
-      AST_BLOCK *classes = parse_classes(tl);
-      block = concat_ast_blocks(block, classes);
-    }
+//     if (_parse_classes) {
+//       AST_BLOCK *classes = parse_classes(tl);
+//       block = concat_ast_blocks(block, classes);
+//     }
 
-    return block;
-  } else {
-    // Analizza un blocco di codice
-    int start = 0;
+//     return block;
+//   } else {
+//     // Analizza un blocco di codice
+//     int start = 0;
 
-    for (int i = 0; i < tl.size; i++) {  // Itera per i token
-      if (tl.tokens[i].type == TOKEN_IF || tl.tokens[i].type == TOKEN_WHILE || tl.tokens[i].type == TOKEN_FOR) {
-        int end = find_block_end(slice(tl, i, tl.size - i));
-        if (end == -1) {
-          switch (tl.tokens[i].type) {
-            case TOKEN_IF:
-              fprintf(stderr, "Errore: blocco if mai aperto\n");
-              exit(1);
-              break;
-            case TOKEN_WHILE:
-              fprintf(stderr, "Errore: blocco while mai aperto\n");
-              exit(1);
-              break;
-            case TOKEN_FOR:
-              fprintf(stderr, "Errore: blocco for mai aperto\n");
-              exit(1);
-              break;
-          }
+//     for (int i = 0; i < tl.size; i++) {  // Itera per i token
+//       if (tl.tokens[i].type == TOKEN_IF || tl.tokens[i].type == TOKEN_WHILE || tl.tokens[i].type == TOKEN_FOR) {
+//         int end = find_block_end(slice(tl, i, tl.size - i));
+//         if (end == -1) {
+//           switch (tl.tokens[i].type) {
+//             case TOKEN_IF:
+//               fprintf(stderr, "Errore: blocco if mai aperto\n");
+//               exit(1);
+//               break;
+//             case TOKEN_WHILE:
+//               fprintf(stderr, "Errore: blocco while mai aperto\n");
+//               exit(1);
+//               break;
+//             case TOKEN_FOR:
+//               fprintf(stderr, "Errore: blocco for mai aperto\n");
+//               exit(1);
+//               break;
+//           }
           
-        }
-        end += i;
-        TokenList sublist = slice(tl, i, end - i + 1);
-        add_ast_to_block(block, generate_tree(sublist));
-        i = end;
-        start = end + 1;
-      }
+//         }
+//         end += i;
+//         TokenList sublist = slice(tl, i, end - i + 1);
+//         add_ast_to_block(block, generate_tree(sublist));
+//         i = end;
+//         start = end + 1;
+//       }
 
-      if (tl.tokens[i].type == TOKEN_EOL) { // Nuova riga
-        TokenList sublist = { .tokens = &tl.tokens[start], .size = i - start };
-        // Genera un albero AST per la sottolista di token
-        add_ast_to_block(block, generate_tree(sublist));
-        start = i + 1;
-      }
-    }
-  }
+//       if (tl.tokens[i].type == TOKEN_EOL) { // Nuova riga
+//         TokenList sublist = { .tokens = &tl.tokens[start], .size = i - start };
+//         // Genera un albero AST per la sottolista di token
+//         add_ast_to_block(block, generate_tree(sublist));
+//         start = i + 1;
+//       }
+//     }
+//   }
 
-  return block;
-}
+//   return block;
+// }
 
 
 
@@ -1141,73 +1141,187 @@ void load_tokens(TokenList tl) {
   tokens = tl;
 }
 
+void compile_error(char *message) {
+  fprintf(stderr, "Error: %s\n", message);
+  // TODO: skippare al primo simbolo sicuro (parentesi chiusa, EOL ...) senza interrompere la compilazione
+  exit(1);
+}
+
 // Legge il token senza consumarlo
 Token peek(int offset) {
   return tokens.tokens[current + offset];
 }
 
+bool match(TokenType type) {
+  return peek(0).type == type;
+}
+
 // Consuma il token e avanza
-Token consume() {
-  return tokens.tokens[current++];
+Token expect(TokenType type, char *message) {
+  if (peek(0).type == type) {
+    tokens.size--;
+    return tokens.tokens[current++];
+  } else {
+    compile_error(message);
+  }
 }
 
 AST *parse_expression() {
-  // TODO: da implementare
+  // Parsing delle espressioni aritmetiche
+  // for (int i = 0; i < tokens.size; i++) {  // Operatori {+, -}
+  //   TokenList tl_left = (TokenList) {tokens.tokens, i};
+  //   TokenList tl_right = (TokenList) {tokens.tokens + i + 1, tl.size - (i + 1)};
+
+  //   switch (tokens.tokens[i].type) {
+  //     case TOKEN_SUM:
+  //       TokenList left = generate_tree(tl_left); // Prende i token fino all'operatore
+  //       TokenList right = generate_tree(tl_right); // Token dopo l'operatore
+        
+  //       return new_ast_add(left, right);
+  //     break;
+  //     case TOKEN_SUB:
+  //       left = generate_tree(tl_left); // Prende i token fino all'operatore
+  //       right = generate_tree(tl_right); // Token dopo l'operatore
+
+  //       return new_ast_sub(left, right);
+  //     break;
+  //   }
+  // }
+  
+  // for (int i = 0; i < tl.size; i++) {  // Operatori {*, /, %}
+  //   TokenList tl_left = (TokenList) {tl.tokens, i};
+  //   TokenList tl_right = (TokenList) {tl.tokens + i + 1, tl.size - (i + 1)};
+
+  //   switch (tl.tokens[i].type) {
+  //     case TOKEN_MUL:
+  //       left = generate_tree(tl_left); // Prende i token fino all'operatore
+  //       right = generate_tree(tl_right); // Token dopo l'operatore
+        
+  //       return new_ast_mul(left, right);
+  //     break;
+  //     case TOKEN_DIV:
+  //       left = generate_tree(tl_left); // Prende i token fino all'operatore
+  //       right = generate_tree(tl_right); // Token dopo l'operatore
+        
+  //       return new_ast_div(left, right);
+  //     case TOKEN_PERCENT:
+  //       left = generate_tree(tl_left); // Prende i token fino all'operatore
+  //       right = generate_tree(tl_right); // Token dopo l'operatore
+        
+  //       return new_ast_mod(left, right);
+  //     break;
+  //   }
+  // }
 }
 
-AST *parse_if() {
-  expect(TOKEN_IF);
-  expect(TOKEN_LPAREN);
-  parse_expression();
-  expect(TOKEN_RPAREN);
-  parse_block();
-  if (peek(0).type == TOKEN_ELSE) {
-    consume();  // Consuma "else"
-    parse_block();
+AST *parse_block() {
+  expect(TOKEN_LBRACE, "Missing opening bracket '{'");
+
+  AST *block = malloc(sizeof(AST));
+  block->tag = TAG_BLOCK;
+
+  block->data.ast_block.statements = NULL;
+  block->data.ast_block.count = 0;
+
+  while (peek(0).type != TOKEN_RBRACE) {
+    AST *stmt = parse_statement();
+    if (stmt) add_ast_to_block(block, stmt);
   }
+  return block;
+}
+
+
+AST *parse_if() {
+  expect(TOKEN_IF, "Where did the 'if' go???");
+  expect(TOKEN_LPAREN, "Missing '(' after 'if'");
+  AST *condition = parse_expression();
+  expect(TOKEN_RPAREN, "Unclosed '(' after 'if'");
+  AST *body = parse_block();
+
+  // if (peek(0).type == TOKEN_ELSE) {
+  //   expect(TOKEN_ELSE, "Where did the 'else' go???");  // Consuma "else"
+  //   parse_block();
+  // }
+  return new_ast_if(condition, body);
+}
+
+AST *parse_while() {
+  expect(TOKEN_WHILE, "Where did the 'while' go???");
+  expect(TOKEN_LPAREN, "Expected '(' after while statement");
+  AST *condition = parse_expression();
+  expect(TOKEN_RPAREN, "Unclosed '(' after while statement");
+  AST *body = parse_statement();
+
+  return new_ast_while(condition, body);
 }
 
 
 AST *parse_function_definition() {
-  char *name = tokens.tokens[1].value.value.sval; // Nome funzione
+  expect(TOKEN_FUN, "Where did the 'fun' go???");
+  Token name = expect(TOKEN_IDENTIFIER, "A 'fun' token must be followed by a function name");  // Nome funzione
+  expect(TOKEN_LPAREN, "Missing opening parenthesis '(' in function definition");
+  
   int param_count = 0;
-  char **params = malloc(sizeof(char *) * 20); // Max 20 parametri
+  char **params = malloc(sizeof(char *) * 256); // Max 256 parametri
 
   // Legge i parametri
-  int i = 3;  // Salta "fun", il nome e (
-  while (tl.tokens[i].type != TOKEN_RPAREN) {
-    if (tl.tokens[i].type == TOKEN_IDENTIFIER) {
-      params[param_count++] = tl.tokens[i].value.value.sval;
-    }
-    i++;
+  if (!match(TOKEN_RPAREN)) {
+    do {
+      Token param = expect(TOKEN_IDENTIFIER, "Expected a parameter name");
+      params[param_count++] = strdup(param.value.value.sval);
+
+      if (param_count >= 256) {
+        compile_error("Too many parameters in function definition");
+      }
+    } while (match(TOKEN_COMMA));
+  } else {
+    free(params);
+    params = NULL;
   }
 
-  i++; // Salta il token =>
-
-  // Analizza il blocco codice della funzione
-  TokenList body = extract_block(tl);
-
-  AST_BLOCK *block = parse_program(body, false, false);
+  // Chiudere la parentesi
+  expect(TOKEN_RPAREN, "Missing closing parenthesis ')' in function definition");
+  // Inizio del corpo =>
+  expect(TOKEN_ARROW, "Missing arrow in function definition");
+  // Parsa il blocco di codice
+  AST *body = parse_block();
 
   // Crea il nodo funzione
-  return new_ast_funct(name, params, param_count, block);
+  return new_ast_funct(name.value.value.sval, params, param_count, body);
 }
 
+AST *parse_for() {}
+AST *parse_return() {}
+AST *parse_function_call() {}
+AST *parse_assignment() {}
 
+AST *parse_declaration() {
+  expect(TOKEN_DECLARE, "Where did the '@' go???");
+  Token name = expect(TOKEN_IDENTIFIER, "A 'declare' token must be followed by a variable name");
+  expect(TOKEN_ASSIGN, "Missing '=' in variable declaration");
 
+  AST *value = parse_expression();
+
+  expect(TOKEN_EOL, "Missing ';' after variable declaration");
+
+  return new_ast_declaration(name.value.value.sval, value);
+}
+void panic_mode() {}
 
 
 
 AST *parse_statement() {
+  if (match(TOKEN_FUN)) return parse_function_definition();
   if (match(TOKEN_IF)) return parse_if();
   if (match(TOKEN_WHILE)) return parse_while();
   if (match(TOKEN_FOR)) return parse_for();
   if (match(TOKEN_RETURN)) return parse_return();
+  if (match(TOKEN_DECLARE)) return parse_declaration();
   if (match(TOKEN_IDENTIFIER)) {
     if (peek(1).type == TOKEN_LPAREN) return parse_function_call();
     if (peek(1).type == TOKEN_ASSIGN) return parse_assignment();
   }
-  error("Istruzione non riconosciuta");
+  compile_error("Istruzione non riconosciuta");
   panic_mode();
   return NULL;
 }
@@ -1222,7 +1336,7 @@ AST *parse_program() {
   while (current < tokens.size - 1) {
     AST *stmt = parse_statement();
     if (stmt) {
-      add_ast_to_block(block, stmt);
+      add_ast_to_block(&block->data.ast_block, stmt);
     }
   }
   return block;

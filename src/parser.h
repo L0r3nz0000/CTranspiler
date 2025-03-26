@@ -179,13 +179,15 @@ AST *new_ast_sub(AST *left, AST *right);
 AST *new_ast_mul(AST *left, AST *right);
 AST *new_ast_div(AST *left, AST *right);
 AST *new_ast_funct(char *name, char **params, int param_count, AST_BLOCK *body);
-AST *new_ast_declare(AST *name, AST *value);
+AST *new_ast_declaration(AST *name, AST *value);
 AST *new_ast_var(char *name);
 
 VarType typeOf(AST* ast);  // Returns the data type of something
 AST *generate_tree(TokenList tl);
 void print_tree(AST *node, int indent);
-AST_BLOCK *parse_program(TokenList tl, bool parse_functions, bool parse_classes);
-AST_BLOCK *define_all_functions(TokenList tl, int max_depth);
+AST *parse_program();
+void load_tokens(TokenList tl);
+AST *parse_statement();
+AST *parse_function_definition();
 
 #endif

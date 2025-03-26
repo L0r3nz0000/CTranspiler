@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   }
   
   // Write code on file
-  generate_c_code(block, f);
+  //generate_c_code(block, f);
 
   bool static_binary = false;
 
